@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import logging
 
-from ..models.data_models import SlideAnalysis, ProcessingResult
+from src.models.data_models import SlideAnalysis, ProcessingResult
 
 
 class OutputManager:

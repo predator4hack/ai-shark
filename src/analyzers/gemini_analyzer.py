@@ -15,7 +15,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from PIL import Image
 
-from ..models.data_models import SlideImage, SlideAnalysis
+from src.models.data_models import SlideImage, SlideAnalysis
 from config.settings import settings
 
 
