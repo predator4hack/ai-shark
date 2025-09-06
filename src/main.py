@@ -12,6 +12,8 @@ from typing import List, Optional
 sys.path.append(str(Path(__file__).parent))
 
 from config.settings import settings
+from config.logging_config import setup_logging
+from config.startup_validation import run_startup_validation
 from src.models.data_models import SlideImage, SlideAnalysis, ProcessingResult
 from src.processors.document_processor import DocumentProcessor, DocumentProcessorError
 from src.analyzers.gemini_analyzer import GeminiAnalyzer
@@ -19,8 +21,8 @@ from src.output.output_manager import OutputManager
 from src.ui.streamlit_interface import StreamlitInterface, ProgressTracker, SidebarManager
 
 
-# Configure logging
-logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
+# Setup logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -235,7 +237,7 @@ class DocumentProcessingPipeline:
                         successful_analyses += 1
                     
                     # Brief delay for progress visibility and API rate limiting
-                    time.sleep(1)
+                    time.sleep(2)  # Increased delay to prevent rate limiting
                     
                     logger.debug(f"Completed analysis for slide {i + 1}")
                     
@@ -258,9 +260,31 @@ class DocumentProcessingPipeline:
             
             # Check if we have any successful analyses
             if successful_analyses == 0:
-                raise ProcessingError(
-                    "All slide analyses failed. Please check your document quality and API connection."
-                )
+                # Check if failures are due to rate limiting
+                rate_limit_errors = sum(1 for result in analysis_results 
+                                      if any("rate limit" in error.lower() for error in result.errors))
+                
+                if rate_limit_errors > 0:
+                    # Rate limiting detected - provide fallback results instead of failing
+                    logger.warning(f"All analyses failed due to rate limiting. Providing fallback results.")
+                    
+                    # Try to get retry time from analyzer
+                    retry_time = getattr(self.gemini_analyzer, '_rate_limited_until', 0)
+                    if retry_time > time.time():
+                        wait_minutes = int((retry_time - time.time()) / 60) + 1
+                        self.ui.show_warning(
+                            f"⚠️ API rate limits exceeded. Providing basic slide information instead of detailed analysis. "
+                            f"You can try again in approximately {wait_minutes} minutes for full AI analysis."
+                        )
+                    else:
+                        self.ui.show_warning(
+                            "⚠️ API rate limits exceeded. Providing basic slide information instead of detailed analysis. "
+                            "Please wait and try again later for full AI analysis."
+                        )
+                else:
+                    raise ProcessingError(
+                        "All slide analyses failed. Please check your document quality and API connection."
+                    )
             
             # Log analysis summary
             failed_analyses = total_slides - successful_analyses
@@ -392,7 +416,25 @@ def main():
     st.title("📊 VC Document Analyzer")
     st.markdown("AI-powered pitch deck analysis for venture capital professionals")
     
-    # Check API configuration
+    # Run startup validation (but don't block UI for minor issues)
+    # Cache validation results to avoid running on every Streamlit rerun
+    if 'startup_validation_done' not in st.session_state:
+        try:
+            validation_passed = run_startup_validation()
+            st.session_state.startup_validation_done = True
+            st.session_state.startup_validation_passed = validation_passed
+            
+            if not validation_passed:
+                st.warning("⚠️ Some startup validations failed. Check the logs for details.")
+        except Exception as e:
+            st.error(f"⚠️ Startup validation error: {e}")
+            logger.error(f"Startup validation failed: {e}")
+            st.session_state.startup_validation_done = True
+            st.session_state.startup_validation_passed = False
+    elif not st.session_state.get('startup_validation_passed', False):
+        st.warning("⚠️ Some startup validations failed. Check the logs for details.")
+    
+    # Check critical API configuration
     if not settings.GOOGLE_API_KEY:
         st.error("⚠️ Google API Key not configured. Please set the GOOGLE_API_KEY environment variable.")
         st.info("💡 You can get an API key from the Google AI Studio: https://makersuite.google.com/app/apikey")
