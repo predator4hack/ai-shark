@@ -5,11 +5,15 @@
 .env.test.local
 .env.production.local
 
-
 # Virtual Environments
 .venv/
 .env/
 venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
 
 .kiro
 .env
