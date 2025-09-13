@@ -1,38 +1,46 @@
 {
-  "Company": [
+  "Title": [
     1
   ],
   "Team": [
     2
   ],
-  "Market": [
-    3,
-    4,
-    16,
-    17
-  ],
   "Problem": [
+    3,
+    4
+  ],
+  "Solution": [
     5,
     6
   ],
-  "Solution": [
-    7,
-    10,
-    11,
-    12,
+  "Traction": [
+    7
+  ],
+  "Impact": [
+    8
+  ],
+  "Market_Size": [
+    9
+  ],
+  "GTM_Strategy": [
+    10
+  ],
+  "Business_Model": [
+    11
+  ],
+  "Case_Study": [
+    12
+  ],
+  "Financials": [
     13
   ],
-  "Traction": [
-    8,
-    9,
-    14,
-    15,
-    19
+  "Ask": [
+    14
   ],
-  "Competition": [
-    18
+  "Vision": [
+    15
   ],
-  "Growth Plan": [
-    20
+  "Contact_Information": [
+    16
   ]
 }

@@ -25,6 +25,7 @@ dependencies = [
     { name = "pymupdf" },
     { name = "python-dotenv" },
     { name = "python-pptx" },
+    { name = "pyyaml" },
     { name = "requests" },
     { name = "streamlit" },
 ]
@@ -46,6 +47,7 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-pptx", specifier = ">=0.6.21" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "streamlit", specifier = ">=1.28.0" },
 ]

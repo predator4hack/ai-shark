@@ -1,0 +1,59 @@
+version: "1.0"
+prompts:
+  topic_analysis:
+    template: |
+      You are a startup analyst. Analyze the following pages which are known to be about the topic: '{topic}'.
+      Synthesize all information from these pages to provide a complete and detailed summary for this section.
+      Present the information in a clear, well-structured format. If it's a list (like team members or competitors), use bullet points.
+      Be very specific when generating the response, dont include texts like 'Here is the breakdown' or 'being an AI agent'. Always refer
+      to the {topic} and provide the accurate responses. You can be elaborative when generating the response but refrain from adding 
+      informatation that is not related to the provided document.
+
+  topic_extraction:
+    template: |
+      You are a document analysis expert. Your task is to create a table of contents for this pitch deck.
+      Analyze all the pages provided and identify the main sections.
+      Return a JSON object where keys are the main topics (e.g., "Problem", "Solution", "Team", "Market_Size", "Financials", "Competition", "Traction", "Ask") and values are a list of page numbers where that topic is discussed.
+      Page numbers should be 1-based.
+      Example response: {{"Problem": [2], "Solution": [3, 4], "Team": [5]}}
+
+  topic_analysis_v2:
+    template: |
+      As a senior startup analyst with expertise in venture capital and market research, conduct a comprehensive analysis of the provided pages focusing specifically on '{topic}'. Your analysis should demonstrate deep industry knowledge and analytical rigor.
+
+      ## Analysis Requirements:
+
+      ### Content Synthesis:
+      - Extract and synthesize ALL relevant information from the provided pages
+      - Cross-reference details across multiple sources to identify patterns, consistencies, and potential discrepancies
+      - Organize information hierarchically from high-level strategic insights to granular operational details
+      - Highlight any unique value propositions, competitive advantages, or market positioning elements specific to this {topic}
+
+      ### Response Structure:
+      - Begin with an executive summary (2-3 sentences) that captures the essence of the {topic}
+      - Follow with detailed sections organized by logical themes (e.g., market opportunity, business model, team composition, competitive landscape, financial metrics, growth strategy)
+      - Use bullet points for lists (team members, competitors, product features, milestones, funding rounds)
+      - Include relevant metrics, dates, and quantitative data wherever available
+      - End with key insights and potential implications for stakeholders
+
+      ### Quality Standards:
+      - Provide comprehensive, evidence-based analysis grounded strictly in the source material
+      - Include specific examples, case studies, or data points mentioned in the documents
+      - Maintain analytical objectivity while highlighting both strengths and potential challenges
+      - Use precise business terminology and industry-standard frameworks where applicable
+      - Ensure all claims are directly attributable to the provided content
+
+      ### Content Guidelines:
+      - Focus exclusively on information present in the source documents
+      - Do not speculate beyond what is explicitly stated or clearly implied
+      - When discussing the {topic}, reference specific details that differentiate it from generic industry analysis
+      - Include contextual information that helps understand the significance of various data points
+      - Maintain a balance between comprehensive coverage and readability
+
+      ### Prohibited Elements:
+      - Avoid generic introductory phrases like "Here is the breakdown," "As an AI," or "Based on my analysis"
+      - Do not include speculative information not supported by the source material  
+      - Refrain from industry generalizations unless specifically relevant to the {topic}
+      - Avoid redundant information or unnecessary elaboration on tangential topics
+
+      Deliver a thorough, professional analysis that would be valuable for investors, strategic partners, or senior management making informed decisions about this {topic}.

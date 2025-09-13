@@ -2,6 +2,7 @@ import os
 import io
 import json
 from pathlib import Path
+from sys import version
 import fitz  # PyMuPDF
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -11,6 +12,10 @@ import functools
 
 # Load environment variables from .env file
 load_dotenv()
+
+from src.utils.prompt_manager import PromptManager
+prompt_manager = PromptManager()
+
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL")
@@ -63,13 +68,7 @@ def generate_table_of_contents(page_images: list):
     print("\nStage 1: Generating Table of Contents...")
     model = genai.GenerativeModel(GEMINI_MODEL)
 
-    prompt = """
-    You are a document analysis expert. Your task is to create a table of contents for this pitch deck.
-    Analyze all the pages provided and identify the main sections.
-    Return a JSON object where keys are the main topics (e.g., "Problem", "Solution", "Team", "Market_Size", "Financials", "Competition", "Traction", "Ask") and values are a list of page numbers where that topic is discussed.
-    Page numbers should be 1-based.
-    Example response: {"Problem": [2], "Solution": [3, 4], "Team": [5]}
-    """
+    prompt = prompt_manager.format_prompt("topic_extraction")
 
     # Prepare the content list [prompt, image1, image2, ...]
     content = [prompt] + page_images
@@ -94,13 +93,11 @@ def extract_topic_data(topic: str, page_images: list):
     """Stage 2: Extract detailed information for a specific topic from its relevant pages."""
     model = genai.GenerativeModel(GEMINI_MODEL)
 
-    prompt = f"""
-    You are a startup analyst. Analyze the following pages which are known to be about the topic: '{topic}'.
-    Synthesize all information from these pages to provide a complete and detailed summary for this section.
-    Present the information in a clear, well-structured format. If it's a list (like team members or competitors), use bullet points.
-    Be very specific when generating the response, dont include texts like 'Here is the breakdown' or 'being an AI agent'. Always refer
-    to the {topic} and provide the accureate responses. 
-    """
+    prompt = prompt_manager.format_prompt(
+        "topic_analysis",
+        topic=topic,
+        version="v2"
+    )
 
     content = [prompt] + page_images
     response = model.generate_content(content)
@@ -192,7 +189,8 @@ if __name__ == '__main__':
     try:
         configure_gemini()
         # pitch_deck_pdf_path = '/Users/ritikrajak/Desktop/Hackathon/pitch_decks_data/airbnb-pitch-deck.pdf'
-        pitch_deck_pdf_path = "./assets/Company Data/14. Ziniosa/Ziniosa Pitch Deck.pdf"
+        # pitch_deck_pdf_path = "./assets/Company Data/14. Ziniosa/Ziniosa Pitch Deck.pdf"
+        pitch_deck_pdf_path = "/Users/ritikrajak/Desktop/ai-shark/assets/Company Data/01. Data stride/Sia - DSA-Pitch deck_V1-INR.pdf"
 
         if not Path(pitch_deck_pdf_path).exists():
             print(f"Error: The file was not found at: {pitch_deck_pdf_path}")
