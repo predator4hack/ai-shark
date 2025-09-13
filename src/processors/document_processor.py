@@ -18,6 +18,9 @@ from PIL import Image
 
 # Local imports
 from src.models.data_models import SlideImage
+import os 
+from dotenv import load_dotenv
+load_dotenv()
 
 
 logger = logging.getLogger(__name__)
@@ -55,7 +58,7 @@ class DocumentProcessor:
     }
     
     # File size limits (in bytes)
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB as per requirements
+    MAX_FILE_SIZE = os.getenv("MAX_FILE_SIZE", 100) * 1024 * 1024  # 10MB as per requirements
     
     # Image processing settings
     MAX_IMAGE_WIDTH = 1920
