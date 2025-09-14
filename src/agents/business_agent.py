@@ -158,67 +158,50 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
         Returns:
             Markdown template string for combined analysis
         """
-        return """
-        You are a senior business analyst specializing in startup evaluation. You have been provided with two key documents about a startup:
+        return """You are a senior business analyst. Analyze this startup using BOTH documents provided:
 
-        1. PITCH DECK ANALYSIS: {pitch_deck_content}
+PITCH DECK: {pitch_deck_content}
 
-        2. PUBLIC DATA ANALYSIS: {public_data_content}
+PUBLIC DATA: {public_data_content}
 
-        Please provide a comprehensive business analysis in MARKDOWN format. Combine insights from both documents to create a thorough evaluation. Focus on sector-wise analysis where applicable.
+Create a comprehensive business analysis in markdown format with these sections:
 
-        ## Business Analysis Report
+# Business Analysis Report
 
-        ### Executive Summary
-        [Provide a concise overview of the startup based on both sources]
+## Executive Summary
+Brief overview combining insights from both sources.
 
-        ### Business Model Analysis
-        [Analyze the business model, revenue streams, and value proposition]
+## Business Model & Revenue
+Detail business model, revenue streams, pricing strategy, and financial projections.
 
-        ### Market & Sector Analysis
-        [Provide sector-specific analysis, market positioning, and competitive landscape]
+## Market & Sector Analysis
+Sector-specific analysis, market size, positioning, and competitive landscape.
 
-        ### Revenue Streams & Financial Model
-        [Detail revenue streams, pricing strategy, and financial projections where available]
+## Technology & Scalability
+Technical capabilities, infrastructure, and scalability assessment.
 
-        ### Technology & Scalability
-        [Assess technical capabilities and scalability potential]
+## Target Market & Customers
+Customer segments, market penetration strategy, and user acquisition.
 
-        ### Target Market & Customer Segments
-        [Identify and analyze target customer segments]
+## Competitive Position
+Competitive advantages, differentiation, and market positioning.
 
-        ### Competitive Positioning
-        [Analyze competitive advantages and market positioning]
+## Growth Strategy
+Expansion plans, partnership strategy, and scaling approach.
 
-        ### Growth Strategy & Expansion Plans
-        [Evaluate growth strategies and expansion opportunities]
+## Risk Assessment
+Key business, market, technology, and regulatory risks.
 
-        ### Partnerships & Strategic Alliances
-        [Identify key partnerships and strategic relationships]
+## Sector Insights
+Industry-specific trends, opportunities, and challenges.
 
-        ### Risk Assessment
-        [Identify potential risks and challenges]
+## Strategic Recommendations
+Actionable insights and strategic advice for growth.
 
-        ### Regulatory & Compliance Considerations
-        [Note regulatory requirements and compliance issues]
+## Information Gaps
+Missing data that would enhance this analysis.
 
-        ### Sector-Specific Insights
-        [Provide industry/sector-specific analysis and trends]
-
-        ### Business Insights & Recommendations
-        [Generate key insights, recommendations, and strategic advice]
-
-        ### Information Gaps & Additional Data Needed
-        [List specific information not available in the provided documents that would enhance the analysis]
-
-        **Instructions:**
-        - Utilize all available information from both documents
-        - Where information is missing or unclear, explicitly note this
-        - Provide sector-specific analysis relevant to the industry
-        - Generate insights based on your business expertise
-        - Be specific and cite evidence from the documents
-        - Focus on actionable insights and recommendations
-        """
+Instructions: Use all available information, note gaps explicitly, provide sector-specific insights, cite evidence from documents, focus on actionable recommendations."""
 
     def analyze_revenue_streams(self, document: StartupDocument) -> List[str]:
         """
@@ -604,11 +587,20 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
         try:
             # Get response from LLM
             if self.llm:
+                logger.info(f"Sending prompt to LLM (length: {len(formatted_prompt)} characters)")
                 response = self.llm.invoke(formatted_prompt)
                 if hasattr(response, 'content'):
                     result = response.content
                 else:
                     result = str(response)
+
+                # Check if the response seems truncated
+                if len(result) < 1000:
+                    logger.warning(f"Analysis response is unusually short ({len(result)} characters). May be truncated due to token limits.")
+                elif not result.strip().endswith(('.', '!', '?', '```', '"""')):
+                    logger.warning("Analysis response appears to be truncated (doesn't end with proper punctuation)")
+
+                logger.info(f"Generated analysis: {len(result)} characters")
             else:
                 # Mock response for testing
                 result = self._get_mock_combined_analysis()
@@ -617,8 +609,14 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
             return result.strip()
 
         except Exception as e:
-            logger.error(f"Error in combined document analysis: {e}")
-            raise AnalysisError(f"Combined analysis failed: {e}")
+            error_msg = str(e).lower()
+            if "token" in error_msg or "length" in error_msg or "limit" in error_msg:
+                logger.error(f"Token limit exceeded in combined document analysis: {e}")
+                logger.info("Consider reducing document size or splitting analysis into smaller chunks")
+                raise AnalysisError(f"Token limit exceeded. Try reducing document size or check max_tokens settings: {e}")
+            else:
+                logger.error(f"Error in combined document analysis: {e}")
+                raise AnalysisError(f"Combined analysis failed: {e}")
 
     def _get_mock_combined_analysis(self) -> str:
         """
