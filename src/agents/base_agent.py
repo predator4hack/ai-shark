@@ -432,13 +432,13 @@ class BaseStructuredAgent(BaseAnalysisAgent):
 
             # Prepare input variables
             input_vars = self._prepare_analysis_input(document, **kwargs)
-
+            # print(f"Input variables for {self.agent_name}: {input_vars}")
             # Get prompt template
             prompt_template = self.get_analysis_prompt_template()
-
+            # print(f"Prompt template for {self.agent_name}: {prompt_template.template}")
             # Format prompt
             formatted_prompt = prompt_template.format(**input_vars)
-
+            print(f"Formatted prompt for {self.agent_name}: {formatted_prompt}")
             # Execute LLM call
             raw_response = self._execute_llm_call(formatted_prompt)
 

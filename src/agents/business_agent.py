@@ -151,6 +151,75 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
         or unclear, note this explicitly in your analysis.
         """
 
+    def _get_combined_markdown_template(self) -> str:
+        """
+        Get template for combined document analysis with markdown output
+
+        Returns:
+            Markdown template string for combined analysis
+        """
+        return """
+        You are a senior business analyst specializing in startup evaluation. You have been provided with two key documents about a startup:
+
+        1. PITCH DECK ANALYSIS: {pitch_deck_content}
+
+        2. PUBLIC DATA ANALYSIS: {public_data_content}
+
+        Please provide a comprehensive business analysis in MARKDOWN format. Combine insights from both documents to create a thorough evaluation. Focus on sector-wise analysis where applicable.
+
+        ## Business Analysis Report
+
+        ### Executive Summary
+        [Provide a concise overview of the startup based on both sources]
+
+        ### Business Model Analysis
+        [Analyze the business model, revenue streams, and value proposition]
+
+        ### Market & Sector Analysis
+        [Provide sector-specific analysis, market positioning, and competitive landscape]
+
+        ### Revenue Streams & Financial Model
+        [Detail revenue streams, pricing strategy, and financial projections where available]
+
+        ### Technology & Scalability
+        [Assess technical capabilities and scalability potential]
+
+        ### Target Market & Customer Segments
+        [Identify and analyze target customer segments]
+
+        ### Competitive Positioning
+        [Analyze competitive advantages and market positioning]
+
+        ### Growth Strategy & Expansion Plans
+        [Evaluate growth strategies and expansion opportunities]
+
+        ### Partnerships & Strategic Alliances
+        [Identify key partnerships and strategic relationships]
+
+        ### Risk Assessment
+        [Identify potential risks and challenges]
+
+        ### Regulatory & Compliance Considerations
+        [Note regulatory requirements and compliance issues]
+
+        ### Sector-Specific Insights
+        [Provide industry/sector-specific analysis and trends]
+
+        ### Business Insights & Recommendations
+        [Generate key insights, recommendations, and strategic advice]
+
+        ### Information Gaps & Additional Data Needed
+        [List specific information not available in the provided documents that would enhance the analysis]
+
+        **Instructions:**
+        - Utilize all available information from both documents
+        - Where information is missing or unclear, explicitly note this
+        - Provide sector-specific analysis relevant to the industry
+        - Generate insights based on your business expertise
+        - Be specific and cite evidence from the documents
+        - Focus on actionable insights and recommendations
+        """
+
     def analyze_revenue_streams(self, document: StartupDocument) -> List[str]:
         """
         Specialized analysis for revenue stream identification
@@ -504,6 +573,174 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
             risks.append("High dependency on external partnerships")
 
         return risks
+
+    def analyze_combined_documents(self, pitch_deck_content: str, public_data_content: str) -> str:
+        """
+        Analyze startup using both pitch deck and public data together
+
+        Args:
+            pitch_deck_content: Content from pitch deck analysis
+            public_data_content: Content from public data scraping
+
+        Returns:
+            Markdown formatted business analysis
+        """
+        logger.info("Starting combined document analysis")
+
+        # Create the combined prompt
+        template = self._get_combined_markdown_template()
+
+        prompt = PromptTemplate(
+            template=template,
+            input_variables=["pitch_deck_content", "public_data_content"]
+        )
+
+        # Format the prompt with both documents
+        formatted_prompt = prompt.format(
+            pitch_deck_content=pitch_deck_content,
+            public_data_content=public_data_content
+        )
+
+        try:
+            # Get response from LLM
+            if self.llm:
+                response = self.llm.invoke(formatted_prompt)
+                if hasattr(response, 'content'):
+                    result = response.content
+                else:
+                    result = str(response)
+            else:
+                # Mock response for testing
+                result = self._get_mock_combined_analysis()
+
+            logger.info("Combined document analysis completed successfully")
+            return result.strip()
+
+        except Exception as e:
+            logger.error(f"Error in combined document analysis: {e}")
+            raise AnalysisError(f"Combined analysis failed: {e}")
+
+    def _get_mock_combined_analysis(self) -> str:
+        """
+        Generate mock combined analysis for testing
+
+        Returns:
+            Mock markdown analysis
+        """
+        return """# Business Analysis Report
+
+## Executive Summary
+Based on analysis of both the pitch deck and public data sources, this startup demonstrates strong potential in the AI-powered data analytics market. The company offers an innovative conversational AI interface that democratizes data analytics for non-technical users, with a scalable SaaS/PaaS business model targeting the underserved SMB market.
+
+## Business Model Analysis
+**Core Business Model:** SaaS/PaaS hybrid platform with tiered pricing structure
+**Revenue Approach:** Multi-stream model combining subscription services, enterprise licensing, and consulting services
+**Value Delivery:** Conversational AI interface that makes complex data analytics accessible to non-technical users through automation and natural language processing
+
+## Market & Sector Analysis
+**Sector:** AI-powered Business Intelligence and Data Analytics
+**Market Position:** Targeting the underserved small-to-medium business segment that lacks technical data science expertise
+**Growth Trends:** The AI analytics market is experiencing rapid growth, driven by increasing demand for data-driven decision making and democratization of analytics tools
+**Competitive Landscape:** Differentiates through conversational interface and agentic automation capabilities
+
+## Revenue Streams & Financial Model
+1. **SaaS Subscription Tiers** - Recurring monthly/annual revenue from platform access
+2. **Platform-as-a-Service Licensing** - Enterprise-level API and infrastructure access
+3. **Custom Integration Services** - Professional services for enterprise implementations
+4. **Data Processing & Analytics Consulting** - Expert advisory services for complex analytics projects
+
+## Technology & Scalability
+**Scalability Assessment:** High scalability potential due to cloud-native architecture and automated processes
+**Technical Strengths:** Conversational AI interface, agentic data processing, automated insights generation
+**Platform Approach:** Enables network effects and rapid user acquisition through self-service capabilities
+**Infrastructure:** Cloud-based with API-driven architecture supporting horizontal scaling
+
+## Target Market & Customer Segments
+**Primary Segments:**
+- Small and medium businesses needing data insights but lacking technical expertise
+- Non-technical business users requiring accessible data analysis tools
+- Enterprises seeking automated data processing solutions
+
+**Geographic Focus:** Initially domestic market with planned international expansion
+
+## Competitive Positioning
+**Key Differentiators:**
+- Conversational AI interface for natural language data queries
+- Agentic automation reducing manual data processing work
+- Focus on non-technical users in underserved SMB market
+- Strong technology foundation with proprietary AI capabilities
+
+**Competitive Advantages:** First-mover advantage in conversational data analytics for SMBs
+
+## Growth Strategy & Expansion Plans
+**Strategy Focus:** User-friendly conversational interface and automation to capture underserved SMB market
+**Expansion Approach:** Phased market penetration before geographic expansion
+**Customer Acquisition:** Emphasis on ease-of-use and immediate value demonstration
+**Partnership-Driven Growth:** Leveraging integrations and strategic alliances
+
+## Partnerships & Strategic Alliances
+**Identified Partnership Opportunities:**
+- Data visualization tool integrations (Tableau, Power BI, etc.)
+- Cloud storage providers (AWS, Google Cloud, Azure)
+- Business intelligence platforms for ecosystem expansion
+- Industry-specific solution partners
+
+## Risk Assessment
+**Business Risks:**
+- Market competition from established BI/analytics providers
+- Dependence on AI/ML technology advancement and accuracy
+- Customer acquisition costs in competitive market
+
+**Technology Risks:**
+- Reliance on third-party cloud platforms and APIs
+- AI model performance and reliability requirements
+- Data security and privacy compliance
+
+**Market Risks:**
+- Economic downturn affecting SMB technology spending
+- Rapid technology evolution requiring continuous innovation
+
+## Regulatory & Compliance Considerations
+**Key Requirements:**
+- Data privacy and GDPR compliance for international expansion
+- Industry-specific data regulations (healthcare, finance, etc.)
+- AI ethics and algorithmic transparency requirements
+- Data security standards and certifications
+
+## Sector-Specific Insights
+**AI Analytics Market Trends:**
+- Growing demand for self-service analytics tools
+- Increasing importance of conversational interfaces
+- Shift toward automated insights and recommendations
+- Rising focus on democratizing data science capabilities
+- Market consolidation creating opportunities for specialized players
+
+## Business Insights & Recommendations
+1. **Focus on User Experience:** Continue investing in conversational AI interface to maintain differentiation
+2. **Partnership Strategy:** Accelerate integration partnerships to expand market reach
+3. **Market Education:** Invest in educating SMB market about benefits of data analytics
+4. **Scalability Preparation:** Ensure infrastructure can handle rapid growth in user base
+5. **Compliance Framework:** Develop robust data governance and privacy protection capabilities
+6. **Revenue Diversification:** Balance subscription revenue with higher-margin consulting services
+
+## Information Gaps & Additional Data Needed
+**Financial Information:**
+- Detailed revenue projections and unit economics
+- Customer acquisition costs (CAC) and lifetime value (LTV) metrics
+- Current funding status and runway information
+- Pricing strategy details and conversion rates
+
+**Market Intelligence:**
+- Competitive analysis with specific competitor comparisons
+- Market share data and total addressable market sizing
+- Customer feedback and case studies
+- Churn rates and customer satisfaction metrics
+
+**Operational Details:**
+- Team composition and technical leadership capabilities
+- Technology infrastructure costs and scalability metrics
+- Go-to-market strategy execution timeline
+- International expansion plans and regulatory requirements"""
 
 
 # Convenience function for business analysis
