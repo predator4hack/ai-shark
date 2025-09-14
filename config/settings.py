@@ -36,14 +36,14 @@ class Settings:
     # Gemini API Configuration
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     GEMINI_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
-    GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "4096"))
+    GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))  # Increased for comprehensive analysis
     GEMINI_RETRY_ATTEMPTS: int = int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3"))
     GEMINI_RETRY_DELAY: float = float(os.getenv("GEMINI_RETRY_DELAY", "1.0"))
 
     # Groq API Configuration
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama3-8b-8192")
     GROQ_TEMPERATURE: float = float(os.getenv("GROQ_TEMPERATURE", "0.1"))
-    GROQ_MAX_TOKENS: int = int(os.getenv("GROQ_MAX_TOKENS", "4096"))
+    GROQ_MAX_TOKENS: int = int(os.getenv("GROQ_MAX_TOKENS", "8192"))  # Increased for comprehensive analysis
     GROQ_RETRY_ATTEMPTS: int = int(os.getenv("GROQ_RETRY_ATTEMPTS", "3"))
     GROQ_RETRY_DELAY: float = float(os.getenv("GROQ_RETRY_DELAY", "1.0"))
     
