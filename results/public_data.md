@@ -1,28 +1,24 @@
-Ziniosa is an online platform for buying and selling pre-loved luxury fashion items, offering up to 60% off and providing services like free shipping and Cash on Delivery (COD). The company positions itself as India's only pre-loved luxury destination, guaranteeing 100% authenticated and quality-verified luxury goods from both international and Indian designers.
+SIA Analytics offers an advanced AI analytics platform called Sia, designed to streamline decision-making, optimize operations, and drive innovation for businesses.
 
-**Products Offered:**
+**Core Product: Sia AI Platform**
 
-Ziniosa offers a wide range of pre-loved luxury products for both women and men, including:
+Sia is an AI platform that simplifies and accelerates data analytics processes within an organization. It is built on a multi-agent architecture, utilizing both "Swarm Agents" for large-scale operations and "Solo Agents" for specialized, independent tasks. The platform is designed to make data insights accessible to all users, regardless of their technical expertise, and aims to support strategic decisions across large enterprises.
 
-*   **Handbags:** Shoulder Bags, Sling Bags, Hobo Bags, Tote Bags, Clutches, Backpacks, Belt Bags, Bucket Bags, Wallets, and Luggage.
-*   **Women's Shoes:** Sandals, Sneakers, Heels, Flats, Espadrilles, Pumps, Boots, and Loafers.
-*   **Women's Clothing:** Dresses and Gowns, Sarees, Tops and Shirts, Pants & Jeans, Skirts and Shorts, and Lehenga Suits.
-*   **Women's Jewellery:** Earrings, Bracelets, and Rings.
-*   **Women's Accessories:** Belts, Sunglasses, Watches, and Scarves/Stoles.
-*   **Men's Bags:** Laptop Bags, Backpacks, Messenger Bags, and Luggage.
-*   **Men's Wallets**.
-*   **Men's Clothing:** Men's Shirts, Men's Jackets, Men's Polos, and Men's Sweaters.
-*   **Men's Shoes:** Formal Shoes, Sneakers, Sandals, and Loafers.
-*   **Men's Accessories:** Ties, Watches, Sunglasses, Scarves, Belts, and Cufflinks.
-*   **Men's Jewellery:** Earrings, Bracelets, Rings, and Pendants.
+**Key Features and Services:**
 
-**Featured Designers/Brands:**
+-   **Agentic AI for Enterprise Data:** Sia uses a multi-agent framework, including swarm intelligence and solo agents, for parallel execution of complex data analytics tasks. Swarm Agents collaborate on large-scale operations, data analysis, and strategic planning, while Solo Agents handle specialized functions like market analysis and financial forecasting.
+-   **End-to-End Analytics Pipeline:** The platform covers the entire data pipeline with simple chat commands. This includes:
+    -   **Data Ingestion:** Pulling structured data from sources like AWS, Azure, Snowflake, GCP, and SQL.
+    -   **Data Transformations:** Representing data through charts, plots, and infographics for easier understanding.
+    -   **Model Building & Testing:** Building and testing machine learning models through a chat-based interface.
+    -   **Deployment:** Automatic deployment of workflows and instant generation of APIs.
+    -   **Data Insights:** Generating immediate insights with intelligent reasoning and visual reports.
+    -   **Data Workflows:** Creating and automating reusable workflows.
+-   **Workflow Automation:** Sia features an intuitive drag-and-drop builder to design, automate, and customize workflows without needing to code.
+-   **AI Chat Interface:** Users can leverage a chat-based interface to build models, explore data, and uncover insights.
+-   **Data Application Builder:** The platform allows users to build and share data applications, with the option to list them on a marketplace.
+-   **Flexible Deployment:** Sia can be hosted on a company's own cloud infrastructure or on SIA Analytics' infrastructure, offering scalability and customization.
 
-Ziniosa features a comprehensive list of luxury designers, including, but not limited to, Gucci, Louis Vuitton, Prada, Chanel, Dior, Rolex, Michael Kors, Jimmy Choo, Fendi, Burberry, Versace, Hermes, Sabyasachi, and Gaurav Gupta.
+**Recognition and Backing:**
 
-**Services Offered:**
-
-*   **Buying Pre-loved Luxury Items:** Customers can purchase luxury items at a fraction of the cost, with new arrivals regularly featured.
-*   **Selling an Item:** Ziniosa provides a service for individuals to sell their luxury products, guiding them on how to get their items listed.
-*   **Authentication:** The company has a robust authentication process that includes verifying the source, expert verification, and providing an authenticity certificate with every purchase, assuring customers of genuine luxury items.
-*   **Customer Benefits:** Ziniosa offers benefits such as COD availability, 100% authenticity guarantee, easy returns, and EMI options.
+SIA Analytics has received recognition for its innovative platform. The company was incubated at Nasscom CoE-IoT, won the Elevate 2023 award from the government of Karnataka, and is backed by Numentica Data Services.

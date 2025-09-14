@@ -188,8 +188,8 @@ This document provides a detailed, modular task breakdown for implementing a Lan
 
 1. Create `src/utils/llm_setup.py`:
 
-    - GoogleAI LLM initialization with Gemini Pro
-    - Token counting and management
+    - GoogleAI LLM initialization with Gemini Flash
+    - Groq API integration with openai/gpt-oss-20b model
     - Rate limiting configuration
     - Error handling for API failures
 

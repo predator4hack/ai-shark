@@ -14,12 +14,12 @@ def generate():
         api_key=os.environ.get("GOOGLE_API_KEY"),
     )
 
-    model = "gemini-2.5-flash"
+    model = "gemini-2.5-pro"
     contents = [
         types.Content(
             role="user",
             parts=[
-                types.Part.from_text(text="""You are a company analyst, gather and present all available information from the web about the products and services offered by the company: 'Ziniosa', Website URL: 'https://www.ziniosa.com/'."""),
+                types.Part.from_text(text="""You are a company analyst, gather and present all available information from the web about the products and services offered by the company: 'SIA Analytics', Website URL: 'https://www.sianalytics.in/'."""),
             ],
         ),
     ]
