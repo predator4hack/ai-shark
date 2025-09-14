@@ -22,7 +22,15 @@ dependencies = [
     "llama-index",
     "langchain-openai",
     "langchain-google-genai",
-    "PyYAML>=6.0"
+    "PyYAML>=6.0",
+    "python-markdown>=0.1.0",
+    "pydantic>=2.11.9",
+    "tiktoken>=0.11.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "langchain-core>=0.3.76",
+    "langchain-community>=0.3.29",
+    "google-genai>=1.36.0",
 ]
 [build-system]
 requires = ["hatchling"]
