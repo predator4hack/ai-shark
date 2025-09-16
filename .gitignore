@@ -17,5 +17,4 @@ __pycache__/
 
 .kiro
 .env
-outputs/*
 logs/*
