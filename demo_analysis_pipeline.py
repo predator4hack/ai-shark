@@ -4,14 +4,21 @@ AI-Shark Demo: End-to-End Startup Analysis Pipeline
 This demo script demonstrates the complete AI-Shark analysis pipeline:
 1. Loads documents from results directory (analysis_results.md, public_data.md)
 2. Processes them using the document loader
-3. Runs business analysis using the BusinessAnalysisAgent
+3. Runs analysis using either BusinessAnalysisAgent or MarketAnalysisAgent
 4. Generates comprehensive analysis reports in the outputs directory
 
 Usage:
     python demo_analysis_pipeline.py
 
+Features:
+- Interactive agent selection (Business or Market Analysis)
+- Support for both real LLM and mock responses
+- Combined document analysis (pitch deck + public data)
+- Markdown report generation with sector-specific insights
+
 Output:
-    - outputs/combined_business_analysis.md
+    - outputs/combined_business_analysis.md (for business agent)
+    - outputs/combined_market_analysis.md (for market agent)
     - outputs/analysis_summary.md
 """
 
@@ -19,14 +26,15 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # Import AI-Shark components
 from src.utils.document_loader import DirectoryLoader, MarkdownParser
 from src.agents.business_agent import BusinessAnalysisAgent, create_business_agent
+from src.agents.market_agent import MarketAnalysisAgent, create_market_agent
 from src.utils.llm_setup import get_llm, create_mock_llm, llm_setup
 from src.models.document_models import StartupDocument, DocumentMetadata, ParsedContent
-from src.models.analysis_models import BusinessAnalysis
+from src.models.analysis_models import BusinessAnalysis, MarketAnalysis
 from config.settings import settings
 
 class AnalysisPipelineDemo:
@@ -34,14 +42,16 @@ class AnalysisPipelineDemo:
     Comprehensive demo of the AI-Shark analysis pipeline
     """
 
-    def __init__(self, use_real_llm: bool = False):
+    def __init__(self, use_real_llm: bool = False, agent_type: str = "business"):
         """
         Initialize the demo pipeline
 
         Args:
             use_real_llm: Whether to use real LLM API or mock for demo
+            agent_type: Type of agent to use ("business" or "market")
         """
         self.use_real_llm = use_real_llm
+        self.agent_type = agent_type
         self.results_dir = Path("results")
         self.outputs_dir = Path("outputs")
         self.outputs_dir.mkdir(exist_ok=True)
@@ -50,35 +60,64 @@ class AnalysisPipelineDemo:
         self.document_loader = DirectoryLoader()
         self.markdown_parser = MarkdownParser()
 
-        # Initialize business agent
+        # Initialize agents based on type
         if use_real_llm:
-            self.business_agent = create_business_agent()
+            if agent_type == "business":
+                self.analysis_agent = create_business_agent()
+            else:  # market
+                self.analysis_agent = create_market_agent()
             print(f"🤖 Using real LLM: {llm_setup.get_model_info()}")
         else:
-            # Create mock LLM with realistic business analysis responses
-            mock_responses = self._get_mock_responses()
+            # Create mock LLM with realistic responses
+            mock_responses = self._get_mock_responses(agent_type)
             mock_llm = create_mock_llm(mock_responses)
-            self.business_agent = BusinessAnalysisAgent(llm=mock_llm)
+            if agent_type == "business":
+                self.analysis_agent = BusinessAnalysisAgent(llm=mock_llm)
+            else:  # market
+                self.analysis_agent = MarketAnalysisAgent(llm=mock_llm)
             print("🤖 Using Mock LLM for demonstration")
 
+        print(f"📊 Analysis Agent: {self.analysis_agent.agent_name}")
         print(f"📁 Results directory: {self.results_dir}")
         print(f"📁 Outputs directory: {self.outputs_dir}")
 
-    def _get_mock_responses(self) -> List[str]:
+    def _get_mock_responses(self, agent_type: str) -> List[str]:
         """Get mock responses for testing"""
-        return [
-            json.dumps({
-                "revenue_streams": ["SaaS subscription", "Enterprise licensing"],
-                "scalability": "high",
-                "competitive_position": "Strong market position with proprietary technology",
-                "business_model": "B2B SaaS with freemium tier",
-                "value_proposition": "AI-powered analytics for business intelligence",
-                "target_market": ["SMBs", "Enterprise customers"],
-                "growth_strategy": "Product-led growth with strategic partnerships",
-                "partnerships": ["Technology integrations", "Channel partners"],
-                "regulatory_considerations": ["Data privacy", "Industry compliance"]
-            })
-        ]
+        if agent_type == "business":
+            return [
+                json.dumps({
+                    "revenue_streams": ["SaaS subscription", "Enterprise licensing"],
+                    "scalability": "high",
+                    "competitive_position": "Strong market position with proprietary technology",
+                    "business_model": "B2B SaaS with freemium tier",
+                    "value_proposition": "AI-powered analytics for business intelligence",
+                    "target_market": ["SMBs", "Enterprise customers"],
+                    "growth_strategy": "Product-led growth with strategic partnerships",
+                    "partnerships": ["Technology integrations", "Channel partners"],
+                    "regulatory_considerations": ["Data privacy", "Industry compliance"]
+                })
+            ]
+        else:  # market
+            return [
+                json.dumps({
+                    "market_size": {"tam": "50B", "sam": "5B", "som": "500M"},
+                    "competition": [
+                        {"name": "Tableau", "strength": "Market leader in visualization"},
+                        {"name": "Power BI", "strength": "Microsoft ecosystem integration"},
+                        {"name": "Looker", "strength": "Google cloud integration"}
+                    ],
+                    "positioning": "Conversational AI analytics for SMB market",
+                    "market_trends": ["AI adoption", "Self-service analytics", "SMB digitization"],
+                    "customer_segments": [
+                        {"segment": "SMBs", "size": "10-500 employees"},
+                        {"segment": "Non-technical users", "description": "Business managers"}
+                    ],
+                    "go_to_market_strategy": "Product-led growth with freemium model",
+                    "geographic_focus": ["North America", "Europe"],
+                    "market_barriers": ["Brand recognition", "Customer acquisition"],
+                    "market_opportunities": ["Underserved SMB segment", "Conversational interfaces"]
+                })
+            ]
 
     def load_documents(self) -> List[StartupDocument]:
         """
@@ -194,8 +233,8 @@ class AnalysisPipelineDemo:
             print(f"   📊 Public data content: {len(public_data_content)} characters")
 
             # Perform combined analysis using the new method
-            print("🏗️ Running combined business analysis...")
-            markdown_analysis = self.business_agent.analyze_combined_documents(
+            print(f"🏗️ Running combined {self.agent_type} analysis...")
+            markdown_analysis = self.analysis_agent.analyze_combined_documents(
                 pitch_deck_content=pitch_deck_content,
                 public_data_content=public_data_content
             )
@@ -239,10 +278,12 @@ class AnalysisPipelineDemo:
         processing_time = analysis_result["processing_time"]
 
         # Create report header
-        report_header = f"""# Combined Startup Business Analysis Report
+        analysis_type_title = "Business" if self.agent_type == "business" else "Market & Competition"
+        report_header = f"""# Combined Startup {analysis_type_title} Analysis Report
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Analysis Engine:** AI-Shark Multi-Agent System (Combined Document Analysis)
+**Analysis Agent:** {self.analysis_agent.agent_name}
 **Processing Time:** {processing_time:.2f} seconds
 **Analysis Type:** {analysis_result['analysis_type']}
 
@@ -269,8 +310,14 @@ class AnalysisPipelineDemo:
         # Combine header with LLM-generated analysis
         full_report = report_header + markdown_analysis
 
+        # Extract company name for filename
+        company_name = self._extract_company_name(pitch_deck_doc, public_data_doc)
+
         # Create output file
-        report_file = self.outputs_dir / "combined_business_analysis.md"
+        if company_name:
+            report_file = self.outputs_dir / f"{company_name}-{self.agent_type}-analysis.md"
+        else:
+            report_file = self.outputs_dir / f"combined_{self.agent_type}_analysis.md"
 
         # Write report
         with open(report_file, 'w', encoding='utf-8') as f:
@@ -287,10 +334,12 @@ class AnalysisPipelineDemo:
     def _generate_markdown_summary(self, analysis_result: Dict[str, Any]) -> None:
         """Generate a summary of the combined markdown analysis"""
 
-        summary_content = f"""# Startup Analysis Summary
+        analysis_type_title = "Business" if self.agent_type == "business" else "Market & Competition"
+        summary_content = f"""# Startup {analysis_type_title} Analysis Summary
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Analysis Type:** Combined Document Analysis (Pitch Deck + Public Data)
+**Analysis Agent:** {self.analysis_agent.agent_name}
 **Processing Time:** {analysis_result['processing_time']:.2f} seconds
 
 ## Quick Facts
@@ -310,7 +359,7 @@ class AnalysisPipelineDemo:
 
 ## Output Files
 
-- `combined_business_analysis.md` - Full comprehensive analysis report
+- `combined_{self.agent_type}_analysis.md` - Full comprehensive analysis report
 - `analysis_summary.md` - This summary file
 
 For the complete analysis, please refer to the main report file.
@@ -322,6 +371,42 @@ For the complete analysis, please refer to the main report file.
 
         print(f"📄 Generated analysis summary: {summary_file}")
 
+    def _extract_company_name(self, pitch_deck_doc: StartupDocument, public_data_doc: StartupDocument) -> Optional[str]:
+        """
+        Extract company name from documents for filename
+
+        Args:
+            pitch_deck_doc: Pitch deck document
+            public_data_doc: Public data document
+
+        Returns:
+            Extracted company name or None
+        """
+        import re
+
+        # Try to extract from pitch deck first
+        pitch_content = pitch_deck_doc.content.raw_text
+
+        # Look for patterns like "Sia:", "Company: Sia", etc.
+        patterns = [
+            r'##?\s*([A-Z][a-zA-Z\s&.-]+?):\s*[A-Z]',  # "## Sia: Agentic AI..."
+            r'Company:\s*([A-Z][a-zA-Z\s&.-]+?)(?:\n|$)',  # "Company: Sia"
+            r'\*\*([A-Z][a-zA-Z\s&.-]+?)\*\*\s*is',  # "**Sia** is"
+            r'^([A-Z][a-zA-Z\s&.-]+?)\s+is\s+an?',  # "Sia is an"
+        ]
+
+        for pattern in patterns:
+            matches = re.findall(pattern, pitch_content, re.MULTILINE)
+            if matches:
+                company_name = matches[0].strip()
+                # Clean up the name
+                company_name = re.sub(r'[^\w\s-]', '', company_name)  # Remove special chars
+                company_name = re.sub(r'\s+', '-', company_name.strip())  # Replace spaces with hyphens
+                if len(company_name) > 2 and len(company_name) < 30:  # Reasonable length
+                    return company_name.lower()
+
+        return None
+
     def run_pipeline(self) -> None:
         """
         Run the combined analysis pipeline (pitch deck + public data)
@@ -332,6 +417,7 @@ For the complete analysis, please refer to the main report file.
         print(f"LLM Provider: {llm_setup.get_model_info().get('provider', 'unknown')}")
         print(f"Use Real LLM: {self.use_real_llm}")
         print(f"Analysis Type: Combined Document Analysis (Pitch Deck + Public Data)")
+        print(f"Agent Type: {self.agent_type.title()} Analysis")
 
         try:
             # Step 1: Load documents
@@ -384,7 +470,7 @@ For the complete analysis, please refer to the main report file.
         print("   ✅ Information gap identification")
 
         print(f"\n📁 Generated Files:")
-        print("   📄 combined_business_analysis.md - Full analysis report")
+        print(f"   📄 combined_{self.agent_type}_analysis.md - Full analysis report")
         print("   📄 analysis_summary.md - Quick summary")
 
 
@@ -393,14 +479,25 @@ def main():
     print("AI-Shark Demo: End-to-End Startup Analysis Pipeline")
     print("=" * 60)
 
-    # Determine LLM usage
+    # Determine agent type
     import sys
     if sys.stdin.isatty():
+        print("\nSelect Analysis Agent:")
+        print("1. Business Analysis Agent - Revenue, scalability, competitive positioning")
+        print("2. Market Analysis Agent - Market size, competition, positioning")
+        agent_choice = input("Choose agent (1/2) [1]: ").strip() or "1"
+        agent_type = "business" if agent_choice == "1" else "market"
+
         use_real_llm = input("Use real LLM API? (y/N): ").lower().startswith('y')
     else:
-        # Non-interactive mode - use mock LLM
+        # Non-interactive mode - use defaults
+        agent_type = "business"
         use_real_llm = False
-        print("Running in non-interactive mode - using Mock LLM")
+        print("Running in non-interactive mode - using Business Agent and Mock LLM")
+
+    print(f"\n🔧 Configuration:")
+    print(f"   📊 Agent Type: {agent_type.title()} Analysis")
+    print(f"   🤖 LLM Mode: {'Real API' if use_real_llm else 'Mock/Demo'}")
 
     if use_real_llm:
         # Check if API keys are configured
@@ -416,7 +513,7 @@ def main():
         print("Using Mock LLM for demonstration (no API key required)")
 
     # Create and run pipeline
-    pipeline = AnalysisPipelineDemo(use_real_llm=use_real_llm)
+    pipeline = AnalysisPipelineDemo(use_real_llm=use_real_llm, agent_type=agent_type)
     pipeline.run_pipeline()
 
 
