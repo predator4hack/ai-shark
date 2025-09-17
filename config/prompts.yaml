@@ -58,6 +58,7 @@ prompts:
 
       Deliver a thorough, professional analysis that would be valuable for investors, strategic partners, or senior management making informed decisions about this {topic}.
 
+<<<<<<< HEAD
   questionaire_agent:
     template: |
       **Role:** You are a seasoned investment analyst with deep expertise in evaluating early-stage startups for a venture capital firm.
@@ -274,3 +275,43 @@ prompts:
       ---
       {{investment_memo}}
       ---
+=======
+  # Business Analysis Agent Prompts
+  business_analysis_system:
+    template: |
+      You are a senior business analyst specializing in startup evaluation. Your expertise
+      includes business model analysis, revenue stream identification, competitive positioning,
+      and scalability assessment. You excel at identifying both opportunities and potential
+      red flags in business strategies.
+
+  business_analysis_main:
+    template: |
+      Analyze the following startup document and provide a comprehensive business analysis:
+
+      DOCUMENT CONTENT:
+      {document_content}
+
+      DOCUMENT METADATA:
+      - Type: {document_type}
+      - Word Count: {word_count}
+      - File Name: {file_name}
+      - Sections: {sections}
+
+      Please analyze the business comprehensively and provide your analysis in the following JSON format:
+
+      {format_instructions}
+
+      Focus on these key areas:
+      1. REVENUE STREAMS: Identify all mentioned and implied revenue streams
+      2. BUSINESS MODEL: Describe and evaluate the business model approach
+      3. SCALABILITY: Assess how well the business can scale (high/medium/low)
+      4. COMPETITIVE POSITION: Analyze competitive advantages and positioning
+      5. VALUE PROPOSITION: Extract and evaluate the unique value proposition
+      6. TARGET MARKET: Identify target market segments and customer base
+      7. GROWTH STRATEGY: Evaluate expansion and growth plans
+      8. PARTNERSHIPS: Identify strategic partnerships or opportunities
+      9. REGULATORY CONSIDERATIONS: Note any regulatory challenges or requirements
+
+      Be specific and cite evidence from the document. If information is missing
+      or unclear, note this explicitly in your analysis.
+>>>>>>> 57c77a44179cc90c8c5622fdfd9919668fba5b80

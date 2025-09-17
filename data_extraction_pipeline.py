@@ -189,8 +189,7 @@ if __name__ == '__main__':
     try:
         configure_gemini()
         # pitch_deck_pdf_path = '/Users/ritikrajak/Desktop/Hackathon/pitch_decks_data/airbnb-pitch-deck.pdf'
-        # pitch_deck_pdf_path = "./assets/Company Data/14. Ziniosa/Ziniosa Pitch Deck.pdf"
-        pitch_deck_pdf_path = "/Users/ritikrajak/Desktop/ai-shark/assets/Company Data/01. Data stride/Sia - DSA-Pitch deck_V1-INR.pdf"
+        pitch_deck_pdf_path = "./assets/Company Data/14. Ziniosa/Ziniosa Pitch Deck.pdf"
 
         if not Path(pitch_deck_pdf_path).exists():
             print(f"Error: The file was not found at: {pitch_deck_pdf_path}")
