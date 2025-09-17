@@ -22,7 +22,8 @@ dependencies = [
     "llama-index",
     "langchain-openai",
     "langchain-google-genai",
-    "PyYAML>=6.0"
+    "PyYAML>=6.0",
+    "ddgs"
 ]
 [build-system]
 requires = ["hatchling"]
