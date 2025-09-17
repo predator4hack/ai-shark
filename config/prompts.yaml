@@ -1,317 +1,411 @@
 version: "1.0"
 prompts:
-  topic_analysis:
-    template: |
-      You are a startup analyst. Analyze the following pages which are known to be about the topic: '{topic}'.
-      Synthesize all information from these pages to provide a complete and detailed summary for this section.
-      Present the information in a clear, well-structured format. If it's a list (like team members or competitors), use bullet points.
-      Be very specific when generating the response, dont include texts like 'Here is the breakdown' or 'being an AI agent'. Always refer
-      to the {topic} and provide the accurate responses. You can be elaborative when generating the response but refrain from adding 
-      informatation that is not related to the provided document.
-
-  topic_extraction:
-    template: |
-      You are a document analysis expert. Your task is to create a table of contents for this pitch deck.
-      Analyze all the pages provided and identify the main sections.
-      Return a JSON object where keys are the main topics (e.g., "Problem", "Solution", "Team", "Market_Size", "Financials", "Competition", "Traction", "Ask") and values are a list of page numbers where that topic is discussed.
-      Page numbers should be 1-based.
-      Example response: {{"Problem": [2], "Solution": [3, 4], "Team": [5]}}
-
-  topic_analysis_v2:
-    template: |
-      As a senior startup analyst with expertise in venture capital and market research, conduct a comprehensive analysis of the provided pages focusing specifically on '{topic}'. Your analysis should demonstrate deep industry knowledge and analytical rigor.
-
-      ## Analysis Requirements:
-
-      ### Content Synthesis:
-      - Extract and synthesize ALL relevant information from the provided pages
-      - Cross-reference details across multiple sources to identify patterns, consistencies, and potential discrepancies
-      - Organize information hierarchically from high-level strategic insights to granular operational details
-      - Highlight any unique value propositions, competitive advantages, or market positioning elements specific to this {topic}
-
-      ### Response Structure:
-      - Begin with an executive summary (2-3 sentences) that captures the essence of the {topic}
-      - Follow with detailed sections organized by logical themes (e.g., market opportunity, business model, team composition, competitive landscape, financial metrics, growth strategy)
-      - Use bullet points for lists (team members, competitors, product features, milestones, funding rounds)
-      - Include relevant metrics, dates, and quantitative data wherever available
-      - End with key insights and potential implications for stakeholders
-
-      ### Quality Standards:
-      - Provide comprehensive, evidence-based analysis grounded strictly in the source material
-      - Include specific examples, case studies, or data points mentioned in the documents
-      - Maintain analytical objectivity while highlighting both strengths and potential challenges
-      - Use precise business terminology and industry-standard frameworks where applicable
-      - Ensure all claims are directly attributable to the provided content
-
-      ### Content Guidelines:
-      - Focus exclusively on information present in the source documents
-      - Do not speculate beyond what is explicitly stated or clearly implied
-      - When discussing the {topic}, reference specific details that differentiate it from generic industry analysis
-      - Include contextual information that helps understand the significance of various data points
-      - Maintain a balance between comprehensive coverage and readability
-
-      ### Prohibited Elements:
-      - Avoid generic introductory phrases like "Here is the breakdown," "As an AI," or "Based on my analysis"
-      - Do not include speculative information not supported by the source material  
-      - Refrain from industry generalizations unless specifically relevant to the {topic}
-      - Avoid redundant information or unnecessary elaboration on tangential topics
-
-      Deliver a thorough, professional analysis that would be valuable for investors, strategic partners, or senior management making informed decisions about this {topic}.
-
-<<<<<<< HEAD
-  questionaire_agent:
-    template: |
-      **Role:** You are a seasoned investment analyst with deep expertise in evaluating early-stage startups for a venture capital firm.
-
-      **Context:** You have been given the following investment memo. Your goal is to critically evaluate it and identify areas that require further clarification or deeper investigation before making an investment decision.
-
-      **Task:** Generate a comprehensive list of questions that will help enhance this investment memo. The questions should be probing, insightful, and designed to uncover potential risks, unstated assumptions, and opportunities that are not fully explored.
-
-      **Think like an analyst across these key areas:**
-      *   **Team:** Is the team complete? Do they have the right domain experience? Are there any key roles missing that are critical for the next stage of growth?
-      *   **Problem & Solution:** Is the problem statement clear and compelling? Is the solution truly solving a high-priority problem? Is there evidence of early product-market fit (e.g., user testimonials, engagement metrics)?
-      *   **Market Size & Opportunity:** Are the TAM, SAM, and SOM calculations realistic and well-supported? How was the market size validated (bottom-up vs. top-down)? What are the key drivers of market growth?
-      *   **Product & Technology:** What is the unique technological advantage or proprietary IP? What is the product roadmap for the next 18-24 months? Are there any scalability or technical debt concerns?
-      *   **Go-to-Market Strategy:** Is the customer acquisition strategy clear, scalable, and viable? Are the unit economics (LTV/CAC) sustainable? What is the sales cycle length?
-      *   **Financials:** Are the financial projections realistic and based on sound assumptions? What are the key assumptions behind the revenue forecast? What is the current burn rate, runway, and planned use of funds?
-      *   **Competition:** Who are the main competitors (direct and indirect)? What is the startup's sustainable competitive advantage (e.g., network effects, technology, brand)?
-      *   **Risks:** What are the most significant risks (e.g., market, execution, technology, regulatory)? How does the team plan to mitigate these risks?
-
-      **Output Format:**
-      Please structure your output as a categorized list of questions. Do not add any preamble or introductory text.
-
-      **Example Output:**
-
-      **Team:**
-      1.  [Question 1]
-      2.  [Question 2]
-
-      **Market Opportunity:**
-      1.  [Question 1]
-      ...and so on for all relevant categories.
-
-      **Investment Memo to Analyze:**
-      ---
-      {{investment_memo}}
-      ---
-
-  questionaire_agent_v2:
-    template: |
-      **Role:** You are a principal-level investment analyst at a top-tier VC firm, known for your rigorous due diligence and ability to identify critical blind spots in investment opportunities.
-
-      **Context:** You've been asked to conduct a critical assessment of the attached investment memo. Your reputation depends on asking the right questions—ones that uncover deal-breaking risks, validate key assumptions, and identify the 2-3 factors that will determine this investment's success or failure.
-
-      **Task:** Generate a focused set of high-impact questions that address the most critical gaps and assumptions in this memo. Focus on two types of questions:
-
-      1. **Critical Knowledge Gaps:** Information that's missing or insufficiently detailed in the memo but essential for investment decisions
-      2. **Assumption Validation:** Challenge the most important underlying assumptions that drive the investment thesis
-
-      **Quality Standards:**
-      - **Specificity over generality:** Ask about specific metrics, timelines, and evidence rather than broad concepts
-      - **Information asymmetry focus:** Target details that are unclear, vague, or completely missing from the memo
-      - **Assumption-testing:** Challenge key assumptions that, if wrong, would materially impact returns
-      - **Risk-weighted:** Prioritize questions based on their potential impact on investment success
-      - **Non-obvious insights:** Focus on what other investors might miss, not standard due diligence items
-      - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
-
-      **Investigation Framework - Focus on These Critical Areas:**
-
-      **Founder & Team Deep Dive**
-      - Specific domain expertise and track record in solving similar problems
-      - Previous startup experience (failures, exits, learnings)
-      - Complementary skill sets and role clarity
-      - Advisory board composition and involvement level
-      - Key hires planned and recruitment strategy
-
-      **Business Model Reality Check**
-      - Granular unit economics with cohort-based evidence
-      - Customer acquisition cost trends and scalability assumptions
-      - Revenue model validation and pricing strategy effectiveness
-      - Churn/retention patterns and improvement trajectory
-
-      **Market Position & Competitive Intelligence**
-      - Specific competitive advantages beyond generic claims
-      - Customer switching costs and lock-in mechanisms  
-      - Competitive response scenarios and defensive strategies
-      - Market timing rationale and urgency factors
-
-      **Financial Fundamentals**
-      - Detailed assumptions behind financial projections
-      - Sensitivity analysis for key growth drivers
-      - Capital requirements for different growth scenarios
-      - Path to profitability and cash flow positive timeline
-
-      **Risk Assessment & Blind Spots**
-      - Regulatory, technological, or market timing vulnerabilities
-      - Customer/supplier concentration and dependency risks
-      - Operational bottlenecks that could constrain growth
-      - Technology scalability and infrastructure challenges
-
-      **Evidence & Validation Gaps**
-      - Missing proof points for key claims made in the memo
-      - Unclear or unsupported market size calculations
-      - Vague product differentiation or value proposition statements
-      - Insufficient customer validation or testimonials
-
-      **Output Format:**
-      Structure as a prioritized list with **maximum 15 total questions** across all categories. Focus heavily on what's missing, unclear, or inadequately explained in the memo. Lead each section with the most critical gap or assumption.
-
-      **Example Output:**
-
-      **Founder & Team Deep Dive:**
-      1. What specific experience does the founding team have in [relevant domain], and what measurable outcomes did they achieve in previous roles that demonstrate their ability to execute this vision?
-      2. [Next most critical team-related gap]
-
-      **Business Model Reality Check:**
-      1. [Most critical missing business model detail]
-
-      **Market Position & Competitive Intelligence:**
-      1. [Most critical competitive or market position gap]
-
-      **Financial Fundamentals:**
-      1. [Most critical financial assumption or missing detail]
-
-      **Risk Assessment & Blind Spots:**
-      1. [Most critical unaddressed risk]
-
-      **Evidence & Validation Gaps:**
-      1. [Most critical missing proof point]
-
-      **Investment Memo to Analyze:**
-      ---
-      {{investment_memo}}
-      ---
-
-  questionaire_agent_v3:
-    template: |
-      **Role:** You are a principal-level investment analyst at a top-tier VC firm, known for your rigorous due diligence and ability to identify critical blind spots in investment opportunities.
-
-      **Context:** You've been asked to conduct a critical assessment of the attached investment memo. Your reputation depends on asking the right questions—ones that uncover deal-breaking risks, validate key assumptions, and identify the 2-3 factors that will determine this investment's success or failure.
-
-      **Task:** Generate a focused set of high-impact questions that address the most critical gaps and assumptions in this memo. Focus on two types of questions:
-
-      1. **Critical Knowledge Gaps:** Information that's missing or insufficiently detailed in the memo but essential for investment decisions
-      2. **Assumption Validation:** Challenge the most important underlying assumptions that drive the investment thesis
-
-      **Quality Standards:**
-      - **Specificity over generality:** Ask about specific metrics, timelines, and evidence rather than broad concepts
-      - **Information asymmetry focus:** Target details that are unclear, vague, or completely missing from the memo
-      - **Assumption-testing:** Challenge key assumptions that, if wrong, would materially impact returns
-      - **Risk-weighted:** Prioritize questions based on their potential impact on investment success
-      - **Non-obvious insights:** Focus on what other investors might miss, not standard due diligence items
-      - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
-
-      **Investigation Framework - Focus on These Critical Areas:**
-
-      **Founder & Team Deep Dive**
-      - Specific domain expertise and track record in solving similar problems
-      - Previous startup experience (failures, exits, learnings)
-      - Complementary skill sets and role clarity
-      - Advisory board composition and involvement level
-      - Key hires planned and recruitment strategy
-
-      **Business Model Reality Check**
-      - Granular unit economics with cohort-based evidence
-      - Customer acquisition cost trends and scalability assumptions
-      - Revenue model validation and pricing strategy effectiveness
-      - Churn/retention patterns and improvement trajectory
-
-      **Market Position & Competitive Intelligence**
-      - Specific competitive advantages beyond generic claims
-      - Customer switching costs and lock-in mechanisms  
-      - Competitive response scenarios and defensive strategies
-      - Market timing rationale and urgency factors
-
-      **Financial Fundamentals**
-      - Detailed assumptions behind financial projections
-      - Sensitivity analysis for key growth drivers
-      - Capital requirements for different growth scenarios
-      - Path to profitability and cash flow positive timeline
-
-      **Risk Assessment & Blind Spots**
-      - Regulatory, technological, or market timing vulnerabilities
-      - Customer/supplier concentration and dependency risks
-      - Operational bottlenecks that could constrain growth
-      - Technology scalability and infrastructure challenges
-
-      **Evidence & Validation Gaps**
-      - Missing proof points for key claims made in the memo
-      - Unclear or unsupported market size calculations
-      - Vague product differentiation or value proposition statements
-      - Insufficient customer validation or testimonials
-
-      **Output Format:**
-      Structure as a prioritized list across all categories. Focus heavily on what's missing, unclear, or inadequately explained in the memo. Lead each section with the most critical gap or assumption.
-
-      **Example Output:**
-
-      **Founder & Team Deep Dive:**
-      1. What specific experience does the founding team have in [relevant domain], and what measurable outcomes did they achieve in previous roles that demonstrate their ability to execute this vision?
-      2. [Next most critical team-related gap]
-
-      **Business Model Reality Check:**
-      1. [Most critical missing business model detail]
-
-      **Market Position & Competitive Intelligence:**
-      1. [Most critical competitive or market position gap]
-
-      **Financial Fundamentals:**
-      1. [Most critical financial assumption or missing detail]
-
-      **Risk Assessment & Blind Spots:**
-      1. [Most critical unaddressed risk]
-
-      **Evidence & Validation Gaps:**
-      1. [Most critical missing proof point]
-
-      **CRITICAL OUTPUT INSTRUCTIONS:**
-      - Start directly with the categorized questions - NO introductory text, acknowledgments, or preambles
-      - Do NOT explain what you're going to do or how you'll approach the analysis
-      - Do NOT reference specific text from the memo in your questions (e.g., "The memo mentions..." or "According to the document...")
-      - Write questions as if you're speaking directly to the founders/management team
-      - Each question should stand alone without referencing the memo content
-
-      **Investment Memo to Analyze:**
-      ---
-      {{investment_memo}}
-      ---
-=======
-  # Business Analysis Agent Prompts
-  business_analysis_system:
-    template: |
-      You are a senior business analyst specializing in startup evaluation. Your expertise
-      includes business model analysis, revenue stream identification, competitive positioning,
-      and scalability assessment. You excel at identifying both opportunities and potential
-      red flags in business strategies.
-
-  business_analysis_main:
-    template: |
-      Analyze the following startup document and provide a comprehensive business analysis:
-
-      DOCUMENT CONTENT:
-      {document_content}
-
-      DOCUMENT METADATA:
-      - Type: {document_type}
-      - Word Count: {word_count}
-      - File Name: {file_name}
-      - Sections: {sections}
-
-      Please analyze the business comprehensively and provide your analysis in the following JSON format:
-
-      {format_instructions}
-
-      Focus on these key areas:
-      1. REVENUE STREAMS: Identify all mentioned and implied revenue streams
-      2. BUSINESS MODEL: Describe and evaluate the business model approach
-      3. SCALABILITY: Assess how well the business can scale (high/medium/low)
-      4. COMPETITIVE POSITION: Analyze competitive advantages and positioning
-      5. VALUE PROPOSITION: Extract and evaluate the unique value proposition
-      6. TARGET MARKET: Identify target market segments and customer base
-      7. GROWTH STRATEGY: Evaluate expansion and growth plans
-      8. PARTNERSHIPS: Identify strategic partnerships or opportunities
-      9. REGULATORY CONSIDERATIONS: Note any regulatory challenges or requirements
-
-      Be specific and cite evidence from the document. If information is missing
-      or unclear, note this explicitly in your analysis.
->>>>>>> 57c77a44179cc90c8c5622fdfd9919668fba5b80
+    topic_analysis:
+        template: |
+            You are a startup analyst. Analyze the following pages which are known to be about the topic: '{topic}'.
+            Synthesize all information from these pages to provide a complete and detailed summary for this section.
+            Present the information in a clear, well-structured format. If it's a list (like team members or competitors), use bullet points.
+            Be very specific when generating the response, dont include texts like 'Here is the breakdown' or 'being an AI agent'. Always refer
+            to the {topic} and provide the accurate responses. You can be elaborative when generating the response but refrain from adding 
+            informatation that is not related to the provided document.
+
+    topic_extraction:
+        template: |
+            You are a document analysis expert. Your task is to create a table of contents for this pitch deck.
+            Analyze all the pages provided and identify the main sections.
+            Return a JSON object where keys are the main topics (e.g., "Problem", "Solution", "Team", "Market_Size", "Financials", "Competition", "Traction", "Ask") and values are a list of page numbers where that topic is discussed.
+            Page numbers should be 1-based.
+            Example response: {{"Problem": [2], "Solution": [3, 4], "Team": [5]}}
+
+    topic_analysis_v2:
+        template: |
+            As a senior startup analyst with expertise in venture capital and market research, conduct a comprehensive analysis of the provided pages focusing specifically on '{topic}'. Your analysis should demonstrate deep industry knowledge and analytical rigor.
+
+            ## Analysis Requirements:
+
+            ### Content Synthesis:
+            - Extract and synthesize ALL relevant information from the provided pages
+            - Cross-reference details across multiple sources to identify patterns, consistencies, and potential discrepancies
+            - Organize information hierarchically from high-level strategic insights to granular operational details
+            - Highlight any unique value propositions, competitive advantages, or market positioning elements specific to this {topic}
+
+            ### Response Structure:
+            - Begin with an executive summary (2-3 sentences) that captures the essence of the {topic}
+            - Follow with detailed sections organized by logical themes (e.g., market opportunity, business model, team composition, competitive landscape, financial metrics, growth strategy)
+            - Use bullet points for lists (team members, competitors, product features, milestones, funding rounds)
+            - Include relevant metrics, dates, and quantitative data wherever available
+            - End with key insights and potential implications for stakeholders
+
+            ### Quality Standards:
+            - Provide comprehensive, evidence-based analysis grounded strictly in the source material
+            - Include specific examples, case studies, or data points mentioned in the documents
+            - Maintain analytical objectivity while highlighting both strengths and potential challenges
+            - Use precise business terminology and industry-standard frameworks where applicable
+            - Ensure all claims are directly attributable to the provided content
+
+            ### Content Guidelines:
+            - Focus exclusively on information present in the source documents
+            - Do not speculate beyond what is explicitly stated or clearly implied
+            - When discussing the {topic}, reference specific details that differentiate it from generic industry analysis
+            - Include contextual information that helps understand the significance of various data points
+            - Maintain a balance between comprehensive coverage and readability
+
+            ### Prohibited Elements:
+            - Avoid generic introductory phrases like "Here is the breakdown," "As an AI," or "Based on my analysis"
+            - Do not include speculative information not supported by the source material  
+            - Refrain from industry generalizations unless specifically relevant to the {topic}
+            - Avoid redundant information or unnecessary elaboration on tangential topics
+
+            Deliver a thorough, professional analysis that would be valuable for investors, strategic partners, or senior management making informed decisions about this {topic}.
+
+    questionaire_agent:
+        template: |
+            **Role:** You are a seasoned investment analyst with deep expertise in evaluating early-stage startups for a venture capital firm.
+
+            **Context:** You have been given the following investment memo. Your goal is to critically evaluate it and identify areas that require further clarification or deeper investigation before making an investment decision.
+
+            **Task:** Generate a comprehensive list of questions that will help enhance this investment memo. The questions should be probing, insightful, and designed to uncover potential risks, unstated assumptions, and opportunities that are not fully explored.
+
+            **Think like an analyst across these key areas:**
+            *   **Team:** Is the team complete? Do they have the right domain experience? Are there any key roles missing that are critical for the next stage of growth?
+            *   **Problem & Solution:** Is the problem statement clear and compelling? Is the solution truly solving a high-priority problem? Is there evidence of early product-market fit (e.g., user testimonials, engagement metrics)?
+            *   **Market Size & Opportunity:** Are the TAM, SAM, and SOM calculations realistic and well-supported? How was the market size validated (bottom-up vs. top-down)? What are the key drivers of market growth?
+            *   **Product & Technology:** What is the unique technological advantage or proprietary IP? What is the product roadmap for the next 18-24 months? Are there any scalability or technical debt concerns?
+            *   **Go-to-Market Strategy:** Is the customer acquisition strategy clear, scalable, and viable? Are the unit economics (LTV/CAC) sustainable? What is the sales cycle length?
+            *   **Financials:** Are the financial projections realistic and based on sound assumptions? What are the key assumptions behind the revenue forecast? What is the current burn rate, runway, and planned use of funds?
+            *   **Competition:** Who are the main competitors (direct and indirect)? What is the startup's sustainable competitive advantage (e.g., network effects, technology, brand)?
+            *   **Risks:** What are the most significant risks (e.g., market, execution, technology, regulatory)? How does the team plan to mitigate these risks?
+
+            **Output Format:**
+            Please structure your output as a categorized list of questions. Do not add any preamble or introductory text.
+
+            **Example Output:**
+
+            **Team:**
+            1.  [Question 1]
+            2.  [Question 2]
+
+            **Market Opportunity:**
+            1.  [Question 1]
+            ...and so on for all relevant categories.
+
+            **Investment Memo to Analyze:**
+            ---
+            {{investment_memo}}
+            ---
+
+    questionaire_agent_v2:
+        template: |
+            **Role:** You are a principal-level investment analyst at a top-tier VC firm, known for your rigorous due diligence and ability to identify critical blind spots in investment opportunities.
+
+            **Context:** You've been asked to conduct a critical assessment of the attached investment memo. Your reputation depends on asking the right questions—ones that uncover deal-breaking risks, validate key assumptions, and identify the 2-3 factors that will determine this investment's success or failure.
+
+            **Task:** Generate a focused set of high-impact questions that address the most critical gaps and assumptions in this memo. Focus on two types of questions:
+
+            1. **Critical Knowledge Gaps:** Information that's missing or insufficiently detailed in the memo but essential for investment decisions
+            2. **Assumption Validation:** Challenge the most important underlying assumptions that drive the investment thesis
+
+            **Quality Standards:**
+            - **Specificity over generality:** Ask about specific metrics, timelines, and evidence rather than broad concepts
+            - **Information asymmetry focus:** Target details that are unclear, vague, or completely missing from the memo
+            - **Assumption-testing:** Challenge key assumptions that, if wrong, would materially impact returns
+            - **Risk-weighted:** Prioritize questions based on their potential impact on investment success
+            - **Non-obvious insights:** Focus on what other investors might miss, not standard due diligence items
+            - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
+
+            **Investigation Framework - Focus on These Critical Areas:**
+
+            **Founder & Team Deep Dive**
+            - Specific domain expertise and track record in solving similar problems
+            - Previous startup experience (failures, exits, learnings)
+            - Complementary skill sets and role clarity
+            - Advisory board composition and involvement level
+            - Key hires planned and recruitment strategy
+
+            **Business Model Reality Check**
+            - Granular unit economics with cohort-based evidence
+            - Customer acquisition cost trends and scalability assumptions
+            - Revenue model validation and pricing strategy effectiveness
+            - Churn/retention patterns and improvement trajectory
+
+            **Market Position & Competitive Intelligence**
+            - Specific competitive advantages beyond generic claims
+            - Customer switching costs and lock-in mechanisms  
+            - Competitive response scenarios and defensive strategies
+            - Market timing rationale and urgency factors
+
+            **Financial Fundamentals**
+            - Detailed assumptions behind financial projections
+            - Sensitivity analysis for key growth drivers
+            - Capital requirements for different growth scenarios
+            - Path to profitability and cash flow positive timeline
+
+            **Risk Assessment & Blind Spots**
+            - Regulatory, technological, or market timing vulnerabilities
+            - Customer/supplier concentration and dependency risks
+            - Operational bottlenecks that could constrain growth
+            - Technology scalability and infrastructure challenges
+
+            **Evidence & Validation Gaps**
+            - Missing proof points for key claims made in the memo
+            - Unclear or unsupported market size calculations
+            - Vague product differentiation or value proposition statements
+            - Insufficient customer validation or testimonials
+
+            **Output Format:**
+            Structure as a prioritized list with **maximum 15 total questions** across all categories. Focus heavily on what's missing, unclear, or inadequately explained in the memo. Lead each section with the most critical gap or assumption.
+
+            **Example Output:**
+
+            **Founder & Team Deep Dive:**
+            1. What specific experience does the founding team have in [relevant domain], and what measurable outcomes did they achieve in previous roles that demonstrate their ability to execute this vision?
+            2. [Next most critical team-related gap]
+
+            **Business Model Reality Check:**
+            1. [Most critical missing business model detail]
+
+            **Market Position & Competitive Intelligence:**
+            1. [Most critical competitive or market position gap]
+
+            **Financial Fundamentals:**
+            1. [Most critical financial assumption or missing detail]
+
+            **Risk Assessment & Blind Spots:**
+            1. [Most critical unaddressed risk]
+
+            **Evidence & Validation Gaps:**
+            1. [Most critical missing proof point]
+
+            **Investment Memo to Analyze:**
+            ---
+            {{investment_memo}}
+            ---
+
+    questionaire_agent_v3:
+        template: |
+            **Role:** You are a principal-level investment analyst at a top-tier VC firm, known for your rigorous due diligence and ability to identify critical blind spots in investment opportunities.
+
+            **Context:** You've been asked to conduct a critical assessment of the attached investment memo. Your reputation depends on asking the right questions—ones that uncover deal-breaking risks, validate key assumptions, and identify the 2-3 factors that will determine this investment's success or failure.
+
+            **Task:** Generate a focused set of high-impact questions that address the most critical gaps and assumptions in this memo. Focus on two types of questions:
+
+            1. **Critical Knowledge Gaps:** Information that's missing or insufficiently detailed in the memo but essential for investment decisions
+            2. **Assumption Validation:** Challenge the most important underlying assumptions that drive the investment thesis
+
+            **Quality Standards:**
+            - **Specificity over generality:** Ask about specific metrics, timelines, and evidence rather than broad concepts
+            - **Information asymmetry focus:** Target details that are unclear, vague, or completely missing from the memo
+            - **Assumption-testing:** Challenge key assumptions that, if wrong, would materially impact returns
+            - **Risk-weighted:** Prioritize questions based on their potential impact on investment success
+            - **Non-obvious insights:** Focus on what other investors might miss, not standard due diligence items
+            - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
+
+            **Investigation Framework - Focus on These Critical Areas:**
+
+            **Founder & Team Deep Dive**
+            - Specific domain expertise and track record in solving similar problems
+            - Previous startup experience (failures, exits, learnings)
+            - Complementary skill sets and role clarity
+            - Advisory board composition and involvement level
+            - Key hires planned and recruitment strategy
+
+            **Business Model Reality Check**
+            - Granular unit economics with cohort-based evidence
+            - Customer acquisition cost trends and scalability assumptions
+            - Revenue model validation and pricing strategy effectiveness
+            - Churn/retention patterns and improvement trajectory
+
+            **Market Position & Competitive Intelligence**
+            - Specific competitive advantages beyond generic claims
+            - Customer switching costs and lock-in mechanisms  
+            - Competitive response scenarios and defensive strategies
+            - Market timing rationale and urgency factors
+
+            **Financial Fundamentals**
+            - Detailed assumptions behind financial projections
+            - Sensitivity analysis for key growth drivers
+            - Capital requirements for different growth scenarios
+            - Path to profitability and cash flow positive timeline
+
+            **Risk Assessment & Blind Spots**
+            - Regulatory, technological, or market timing vulnerabilities
+            - Customer/supplier concentration and dependency risks
+            - Operational bottlenecks that could constrain growth
+            - Technology scalability and infrastructure challenges
+
+            **Evidence & Validation Gaps**
+            - Missing proof points for key claims made in the memo
+            - Unclear or unsupported market size calculations
+            - Vague product differentiation or value proposition statements
+            - Insufficient customer validation or testimonials
+
+            **Output Format:**
+            Structure as a prioritized list across all categories. Focus heavily on what's missing, unclear, or inadequately explained in the memo. Lead each section with the most critical gap or assumption.
+
+            **Example Output:**
+
+            **Founder & Team Deep Dive:**
+            1. What specific experience does the founding team have in [relevant domain], and what measurable outcomes did they achieve in previous roles that demonstrate their ability to execute this vision?
+            2. [Next most critical team-related gap]
+
+            **Business Model Reality Check:**
+            1. [Most critical missing business model detail]
+
+            **Market Position & Competitive Intelligence:**
+            1. [Most critical competitive or market position gap]
+
+            **Financial Fundamentals:**
+            1. [Most critical financial assumption or missing detail]
+
+            **Risk Assessment & Blind Spots:**
+            1. [Most critical unaddressed risk]
+
+            **Evidence & Validation Gaps:**
+            1. [Most critical missing proof point]
+
+            **CRITICAL OUTPUT INSTRUCTIONS:**
+            - Start directly with the categorized questions - NO introductory text, acknowledgments, or preambles
+            - Do NOT explain what you're going to do or how you'll approach the analysis
+            - Do NOT reference specific text from the memo in your questions (e.g., "The memo mentions..." or "According to the document...")
+            - Write questions as if you're speaking directly to the founders/management team
+            - Each question should stand alone without referencing the memo content
+
+            **Investment Memo to Analyze:**
+            ---
+            {{investment_memo}}
+            ---
+    questionaire_agent_v4:
+        template: |
+            **Role:** You are a principal-level investment analyst at a top-tier VC firm, known for your rigorous due diligence and ability to 
+            identify critical blind spots in investment opportunities.
+
+            **Context:** You've been provided with multiple analysis reports for a startup company. Your task is to generate a comprehensive founder questionnaire that will help the investment team make an informed decision. This questionnaire should focus on gaps, assumptions, and critical details that need clarification directly from the founding team.
+
+            **Task:** Generate a focused set of high-impact questions that address the most critical gaps and assumptions across all provided reports. Focus on two types of questions:
+
+            1. **Critical Knowledge Gaps:** Information that's missing or insufficiently detailed in the reports but essential for investment decisions
+            2. **Assumption Validation:** Challenge the most important underlying assumptions that drive the investment thesis
+
+            **Quality Standards:**
+            - **Specificity over generality:** Ask about specific metrics, timelines, and evidence rather than broad concepts
+            - **Information asymmetry focus:** Target details that are unclear, vague, or completely missing from the reports
+            - **Assumption-testing:** Challenge key assumptions that, if wrong, would materially impact returns
+            - **Risk-weighted:** Prioritize questions based on their potential impact on investment success
+            - **Founder-focused:** Frame questions as if speaking directly to the founding team
+            - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
+
+            **Analysis Reports Provided:**
+            {% if business_analysis %}
+            **Business Analysis Report:**
+            ---
+            {{business_analysis}}
+            ---
+            {% endif %}
+
+            {% if market_analysis %}
+            **Market Analysis Report:**
+            ---
+            {{market_analysis}}
+            ---
+            {% endif %}
+
+            {% if financial_analysis %}
+            **Financial Analysis Report:**
+            ---
+            {{financial_analysis}}
+            ---
+            {% endif %}
+
+            {% if competitive_analysis %}
+            **Competitive Analysis Report:**
+            ---
+            {{competitive_analysis}}
+            ---
+            {% endif %}
+
+            {% if technology_analysis %}
+            **Technology Analysis Report:**
+            ---
+            {{technology_analysis}}
+            ---
+            {% endif %}
+
+            **Investigation Framework - Focus on These Critical Areas:**
+
+            **Revenue Streams & Business Model:**
+            - Granular revenue stream definitions and contribution percentages
+            - Pricing strategy rationale and competitive positioning
+            - Unit economics validation (CAC, LTV, payback periods)
+            - Revenue model scalability and growth assumptions
+
+            **Financial Fundamentals & Unit Economics:**
+            - Detailed financial metrics (MRR, ARR, burn rate, runway)
+            - Customer acquisition and retention cost trends
+            - Gross margin breakdown and improvement trajectory
+            - Path to profitability and cash flow positive timeline
+
+            **Founder & Team Deep Dive:**
+            - Specific domain expertise and track record
+            - Previous startup experience and learnings
+            - Key hire plans and team scaling strategy
+            - Role clarity and complementary skill sets
+
+            **Technology & Operations:**
+            - Technology stack decisions and scalability
+            - Intellectual property and competitive moats
+            - Operational processes and infrastructure
+            - Facilities and resource requirements
+
+            **Market Position & Competitive Intelligence:**
+            - Competitive advantages beyond generic claims
+            - Customer switching costs and retention mechanisms
+            - Market timing rationale and urgency factors
+            - Defensive strategies against competitive responses
+
+            **Risk Assessment & Mitigation:**
+            - Regulatory, technological, or market timing vulnerabilities
+            - Customer/supplier concentration risks
+            - Operational bottlenecks that could constrain growth
+            - Scenario planning for different market conditions
+
+            **Fundraising & Valuation Strategy:**
+            - Current fundraising round structure and timeline
+            - Valuation methodology and comparable analysis
+            - Use of funds allocation and milestone planning
+            - Future funding requirements and exit strategy
+
+            **Output Format:**
+            Structure as a prioritized list across all categories. Focus heavily on what's missing, unclear, or inadequately explained in the reports. Lead each section with the most critical gap or assumption.
+
+            **Example Output:**
+
+            **Revenue Streams & Business Model:**
+            1. Can you provide a detailed breakdown of each revenue stream with specific contribution percentages and growth rates over the past 12 months?
+            2. [Next most critical business model question]
+
+            **Financial Fundamentals & Unit Economics:**
+            1. [Most critical financial assumption or missing detail]
+
+            **Founder & Team Deep Dive:**
+            1. [Most critical team-related gap]
+
+            **Technology & Operations:**
+            1. [Most critical technology or operational question]
+
+            **Market Position & Competitive Intelligence:**
+            1. [Most critical competitive or market position gap]
+
+            **Risk Assessment & Mitigation:**
+            1. [Most critical unaddressed risk]
+
+            **Fundraising & Valuation Strategy:**
+            1. [Most critical fundraising or valuation question]
+
+            **CRITICAL OUTPUT INSTRUCTIONS:**
+            - Start directly with the categorized questions - NO introductory text, acknowledgments, or preambles
+            - Do NOT explain what you're going to do or how you'll approach the analysis
+            - Do NOT reference specific text from the reports in your questions
+            - Write questions as if you're speaking directly to the founders/management team
+            - Each question should stand alone without referencing the report content
+            - Focus on generating 3-5 high-impact questions per category
+            - Prioritize questions that could be deal-breakers or significantly impact valuation

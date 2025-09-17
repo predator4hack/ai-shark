@@ -3,7 +3,9 @@ import random
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-import uuid
+import glob
+import argparse
+import re
 load_dotenv()
 
 from src.utils.prompt_manager import PromptManager
@@ -47,12 +49,71 @@ def call_llm_api(prompt: str):
         raise # Re-raise the exception to be caught by the retry mechanism
 
 
-def generate_questions_with_retry(investment_memo: str, max_retries: int = 3):
+def load_analysis_reports(company_name: str, reports_dir: str = "outputs") -> dict:
     """
-    Generates questions for an investment memo using an LLM, with a retry mechanism.
+    Load multiple analysis reports for a given company.
+    
+    Args:
+        company_name: The company name to search for in report filenames
+        reports_dir: Directory containing the analysis reports
+        
+    Returns:
+        Dictionary with report types as keys and content as values
+        
+    Raises:
+        Exception: If no reports are found or directory doesn't exist
+    """
+    reports = {}
+    
+    # Validate inputs
+    if not company_name or not company_name.strip():
+        raise ValueError("Company name cannot be empty")
+    
+    # Clean company name for filename matching (remove special characters)
+    clean_company_name = re.sub(r'[^\w\-]', '', company_name.strip().lower())
+    
+    # Check if reports directory exists
+    if not os.path.exists(reports_dir):
+        raise FileNotFoundError(f"Reports directory '{reports_dir}' does not exist")
+    
+    # Search for files matching pattern: {company_name}-*.md
+    pattern = os.path.join(reports_dir, f"{clean_company_name}-*.md")
+    matching_files = glob.glob(pattern)
+    
+    if not matching_files:
+        raise FileNotFoundError(f"No analysis reports found for company '{company_name}' in '{reports_dir}' directory")
+    
+    # Load content from matching files
+    for file_path in matching_files:
+        filename = os.path.basename(file_path)
+        # Extract report type from filename (e.g., "sia-business-analysis.md" -> "business_analysis")
+        report_type = filename.replace(f"{clean_company_name}-", "").replace(".md", "").replace("-", "_")
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                if content.strip():  # Only add non-empty files
+                    reports[report_type] = content
+                    print(f"Loaded {report_type} report from {filename}")
+                else:
+                    print(f"Warning: {filename} is empty, skipping")
+        except Exception as e:
+            print(f"Warning: Could not read {filename}: {e}")
+    
+    if not reports:
+        raise Exception(f"No valid report content found for company '{company_name}'")
+    
+    print(f"Successfully loaded {len(reports)} reports: {list(reports.keys())}")
+    return reports
+
+
+def generate_questions_with_retry(company_name: str, reports: dict, max_retries: int = 3):
+    """
+    Generates questions for multiple analysis reports using an LLM, with a retry mechanism.
 
     Args:
-        investment_memo: The text of the investment memo.
+        company_name: The name of the company being analyzed
+        reports: Dictionary containing analysis reports with report types as keys
         max_retries: The maximum number of times to retry the API call.
 
     Returns:
@@ -60,8 +121,8 @@ def generate_questions_with_retry(investment_memo: str, max_retries: int = 3):
     """
     prompt = prompt_manager.format_prompt(
         "questionaire_agent",
-        investment_memo=investment_memo,
-        version="v3"
+        version="v4",
+        **reports  # Unpack the reports dictionary
     )
 
     for attempt in range(max_retries):
@@ -91,26 +152,38 @@ def generate_questions_with_retry(investment_memo: str, max_retries: int = 3):
 
 # --- Example Usage ---
 if __name__ == "__main__":
-    # This is a sample investment memo. You can replace it with actual memo text.
-    # sample_memo = """
-    # **Company:** InnovateAI
-    # **Problem:** Businesses in the creative industry struggle to generate novel ideas consistently.
-    # **Solution:** We provide a SaaS platform that uses a proprietary generative AI model to brainstorm and develop creative concepts for marketing campaigns, product design, and content creation.
-    # **Market:** The global market for creative tools is estimated at $30B. Our initial target is mid-sized marketing agencies in North America, a $2B segment.
-    # **Team:** Two co-founders: a CEO with 10 years of experience in marketing and a CTO who is a PhD in machine learning.
-    # **Traction:** 15 pilot customers and a growing waitlist of 200+ companies.
-    # """
+    parser = argparse.ArgumentParser(description='Generate founder questionnaire from analysis reports')
+    parser.add_argument('--company-name', required=True, help='Company name for report discovery')
+    parser.add_argument('--reports-dir', default='outputs', help='Directory containing analysis reports')
     
-    with open("results/analysis_results.md", "r") as f:
-        sample_memo = f.read()
-
+    args = parser.parse_args()
+    
     print("--- Running Questionnaire Agent ---")
     try:
-        generated_questions = generate_questions_with_retry(sample_memo)
-        print("\n--- Generated Questions ---")
-        print(generated_questions)
-        with open(f"results/generated_question-{uuid.uuid4()}.md", "w") as f:
-            f.write(generated_questions)
+        # Load analysis reports
+        print(f"Loading analysis reports for company: {args.company_name}")
+        reports = load_analysis_reports(args.company_name, args.reports_dir)
+        
+        # Generate questionnaire
+        print("Generating founder questionnaire...")
+        generated_questions = generate_questions_with_retry(args.company_name, reports)
+        
+        # Ensure outputs directory exists
+        os.makedirs(args.reports_dir, exist_ok=True)
+        
+        # Save output
+        output_file = f"{args.reports_dir}/{args.company_name}-founders-checklist.md"
+        with open(output_file, "w", encoding='utf-8') as f:
+            # Add metadata header
+            f.write(f"# Founder Questionnaire for {args.company_name.title()}\n\n")
+            f.write(f"**Generated on:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"**Reports analyzed:** {', '.join(reports.keys())}\n\n")
+            f.write("---\n\n")
+            f.write(generated_questions or "")
+        
+        print(f"\n--- Questionnaire Generation Complete ---")
+        print(f"Founder questionnaire saved to: {output_file}")
+        print(f"Reports analyzed: {list(reports.keys())}")
             
     except Exception as e:
-        print(f"\nFailed to generate questions after multiple retries: {e}")
+        print(f"\nFailed to generate questionnaire: {e}")

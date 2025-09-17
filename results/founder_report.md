@@ -1,1 +1,0 @@
-Error in research process: 'str' object has no attribute 'get'
