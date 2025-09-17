@@ -28,3 +28,9 @@ Agent 1:
 
 Agent 2:
  - 
+
+
+ Default Company Page for Individual Developer
+
+ Extraction
+ 
