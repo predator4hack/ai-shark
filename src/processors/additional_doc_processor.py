@@ -8,29 +8,19 @@ try:
     import PyPDF2
 except ImportError:
     PyPDF2 = None
+    
 from pathlib import Path
 from typing import Dict, List, Any
 
 from src.processors.base_processor import BaseProcessor
 from src.utils.output_manager import OutputManager
-
-# Import LLM functionality
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-import google.generativeai as genai
-from data_extraction_pipeline import configure_gemini, retry_with_backoff
+from src.utils.llm_manager import llm_manager
 
 class AdditionalDocProcessor(BaseProcessor):
     """Processes additional documents (transcripts, emails, updates)"""
     
     def __init__(self):
         self.supported_extensions = ['.pdf', '.doc', '.docx', '.txt']
-        # Configure Gemini API
-        try:
-            configure_gemini()
-        except Exception as e:
-            print(f"Warning: Could not configure Gemini API: {e}")
     
     def get_supported_extensions(self) -> List[str]:
         """Return list of supported file extensions"""
@@ -58,7 +48,7 @@ class AdditionalDocProcessor(BaseProcessor):
             
             # Structure content using LLM
             filename = Path(file_path).name
-            structured_content = self._structure_content(text_content, filename)
+            structured_content = llm_manager.structure_document_content(text_content, filename)
             
             # Convert to markdown
             markdown_content = self._text_to_markdown(structured_content, filename)
@@ -116,15 +106,16 @@ class AdditionalDocProcessor(BaseProcessor):
                 return file.read()
     
     def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF file"""
+        """Extract text from PDF file using PyMuPDF (fitz)"""
         try:
-            import fitz  # PyMuPDF (already available)
+            import fitz  # PyMuPDF (already available from requirements)
             doc = fitz.open(file_path)
             text = ""
             
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text += page.get_text()
+                text += "\n\n"  # Add spacing between pages
             
             doc.close()
             return text
@@ -132,16 +123,18 @@ class AdditionalDocProcessor(BaseProcessor):
         except Exception as e:
             print(f"Error extracting text from PDF using PyMuPDF: {e}")
             # Fallback to PyPDF2 if available
-            try:
-                with open(file_path, 'rb') as file:
-                    reader = PyPDF2.PdfReader(file)
-                    text = ""
-                    for page in reader.pages:
-                        text += page.extract_text()
-                    return text
-            except Exception as e2:
-                print(f"Error with PyPDF2 fallback: {e2}")
-                return ""
+            if PyPDF2:
+                try:
+                    with open(file_path, 'rb') as file:
+                        reader = PyPDF2.PdfReader(file)
+                        text = ""
+                        for page in reader.pages:
+                            text += page.extract_text()
+                            text += "\n\n"
+                        return text
+                except Exception as e2:
+                    print(f"Error with PyPDF2 fallback: {e2}")
+            return ""
     
     def _extract_text_from_docx(self, file_path: str) -> str:
         """Extract text from DOCX file"""
@@ -170,38 +163,6 @@ class AdditionalDocProcessor(BaseProcessor):
         except Exception as e:
             print(f"Error extracting text from DOCX: {e}")
             return ""
-    
-    @retry_with_backoff()
-    def _structure_content(self, text: str, filename: str) -> str:
-        """Use LLM to structure and clean up content"""
-        try:
-            model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
-            
-            prompt = f"""
-            Please analyze and structure the following document content. The document is named "{filename}".
-            
-            Your task:
-            1. Clean up and organize the content
-            2. Identify the document type (e.g., call transcript, email, update, report)
-            3. Extract key information and organize it logically
-            4. Maintain important details while improving readability
-            5. If it's a transcript, identify speakers and structure conversations
-            6. If it's an email, preserve sender/receiver and subject information
-            7. If it's an update or report, organize by topics/sections
-            
-            Document content:
-            {text[:8000]}  # Limit to first 8000 characters to avoid token limits
-            
-            Please provide a well-structured, cleaned version of this content.
-            """
-            
-            response = model.generate_content(prompt)
-            return response.text
-            
-        except Exception as e:
-            print(f"Error structuring content with LLM: {e}")
-            # Return original text if LLM processing fails
-            return text
     
     def _text_to_markdown(self, structured_text: str, filename: str) -> str:
         """Convert structured text to markdown format"""

@@ -409,3 +409,72 @@ prompts:
             - Each question should stand alone without referencing the report content
             - Focus on generating 3-5 high-impact questions per category
             - Prioritize questions that could be deal-breakers or significantly impact valuation
+
+    metadata_extraction:
+        template: |
+            You are a startup document analysis expert. Analyze all pages of this pitch deck and extract key startup information.
+            
+            Your task is to extract the following specific information and return it as a JSON object:
+            
+            1. **startup_name**: The name of the startup/company
+            2. **sector**: The primary industry sector (e.g., Technology, Healthcare, Financial Services, Consumer Goods, etc.)
+            3. **sub_sector**: The specific sub-sector within the primary sector (e.g., Fintech, BioTech, Ed-Tech, AI, etc.)
+            4. **website**: The company website URL if mentioned
+            5. **table_of_contents**: A mapping of main topics to page numbers where they appear
+            
+            For the table_of_contents, identify main sections like:
+            - Problem/Opportunity
+            - Solution/Product
+            - Market Size/TAM
+            - Business Model
+            - Competition/Competitive Analysis
+            - Team/Founders
+            - Traction/Metrics
+            - Financials/Revenue
+            - Go-to-Market/Sales Strategy
+            - Funding/Ask/Investment
+            - Roadmap/Future Plans
+            
+            Return ONLY a valid JSON object in this exact format:
+            ```json
+            {
+                "startup_name": "Company Name",
+                "sector": "Primary Sector",
+                "sub_sector": "Specific Sub-sector", 
+                "website": "https://company.com",
+                "table_of_contents": {
+                    "Problem": [1, 2],
+                    "Solution": [3, 4],
+                    "Market_Size": [5],
+                    "Team": [6, 7],
+                    "Traction": [8],
+                    "Financials": [9, 10],
+                    "Ask": [11]
+                }
+            }
+            ```
+            
+            Important notes:
+            - Page numbers should be 1-based (first page = 1)
+            - Use consistent topic names with underscores for multi-word topics
+            - If information is not found, use null for missing fields
+            - Ensure the JSON is properly formatted and parseable
+            - Do not include any text outside the JSON object
+
+    document_structuring:
+        template: |
+            Please analyze and structure the following document content. The document is named "{filename}".
+            
+            Your task:
+            1. Clean up and organize the content
+            2. Identify the document type (e.g., call transcript, email, update, report)
+            3. Extract key information and organize it logically
+            4. Maintain important details while improving readability
+            5. If it's a transcript, identify speakers and structure conversations
+            6. If it's an email, preserve sender/receiver and subject information
+            7. If it's an update or report, organize by topics/sections
+            
+            Document content:
+            {content}
+            
+            Please provide a well-structured, cleaned version of this content.

@@ -81,23 +81,26 @@ outputs/
 ### Pitch Deck Processing
 
 1. **File Conversion**: 
-   - PDF: Direct image extraction
+   - PDF: Direct image extraction using PyMuPDF
    - PowerPoint: Converted to PDF first, then to images
 
 2. **Stage 1 - Metadata Extraction**:
    - Uses Gemini AI to analyze all pages
-   - Extracts: startup name, sector, sub-sector, website
-   - Generates table of contents with page mappings
+   - Extracts: startup name, sector, sub-sector, website, table of contents
+   - Custom prompt designed specifically for comprehensive metadata extraction
+   - Returns structured JSON with company information and content mapping
 
 3. **Stage 2 - Topic Analysis**:
-   - Processes each topic based on table of contents
+   - Processes each topic based on extracted table of contents
    - Extracts detailed content for specific page ranges
    - Uses targeted prompts for topic-specific analysis
+   - Handles missing or invalid page references gracefully
 
 4. **Output Generation**:
-   - Converts structured data to markdown
-   - Saves metadata as JSON
-   - Creates human-readable reports
+   - Converts structured data to markdown with proper formatting
+   - Saves metadata as separate JSON file
+   - Creates human-readable reports with company header and structured content
+   - Includes table of contents overview in markdown output
 
 ### Additional Document Processing
 
