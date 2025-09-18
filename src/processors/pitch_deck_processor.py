@@ -52,7 +52,7 @@ class PitchDeckProcessor(BaseProcessor):
             
             if not metadata:
                 raise ValueError("Could not extract metadata from the document")
-            
+            print(metadata)
             # Extract company name and create output directory
             company_name = metadata.get('startup_name')
             if not company_name:

@@ -114,10 +114,10 @@ class LLMManager:
             content = [prompt] + page_images
             
             response = model.generate_content(content)
-            
+            print(f"Response: {response}")
             # Clean up the response to extract only the JSON part
             cleaned_response = response.text.strip()
-            
+
             # Remove markdown code blocks if present
             if "```json" in cleaned_response:
                 cleaned_response = cleaned_response.split("```json")[1].split("```")[0].strip()

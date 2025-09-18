@@ -1,0 +1,54 @@
+{
+  "startup_name": "ZINIOSA",
+  "sector": "Fashion",
+  "sub_sector": "Luxury_Fashion_Resale",
+  "website": "https://www.ziniosa.com",
+  "table_of_contents": {
+    "Problem": [
+      5,
+      6
+    ],
+    "Opportunity": [
+      5
+    ],
+    "Solution": [
+      7,
+      10,
+      12,
+      13,
+      14
+    ],
+    "Market_Size": [
+      3,
+      17,
+      18
+    ],
+    "Business_Model": [
+      11
+    ],
+    "Competition": [
+      20
+    ],
+    "Team": [
+      2
+    ],
+    "Traction": [
+      8,
+      9,
+      15,
+      16,
+      22,
+      23
+    ],
+    "Financials": [
+      15
+    ],
+    "Go_to_Market": [
+      16
+    ],
+    "Roadmap": [
+      21
+    ],
+    "Funding": null
+  }
+}
