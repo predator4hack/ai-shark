@@ -7,6 +7,9 @@ from typing import Dict, Any
 from src.processors.pitch_deck_processor import PitchDeckProcessor
 from src.processors.additional_doc_processor import AdditionalDocProcessor
 from src.processors.analysis_pipeline import AnalysisPipeline
+from src.processors.ref_doc_processor import RefDocProcessor
+from src.processors.qa_doc_processor import QADocProcessor
+from src.agents.founder_simulation_agent import FounderSimulationAgent
 from src.utils.output_manager import OutputManager
 from src.utils.docx_converter import convert_founders_checklist_to_docx, is_docx_conversion_available
 
@@ -38,6 +41,9 @@ def main():
     
     # Analysis section
     analysis_section()
+    
+    # Founder simulation section (shows after analysis completion)
+    founder_simulation_section()
     
     # Display results below
     display_results()
@@ -340,6 +346,205 @@ def process_additional_docs(uploaded_files):
     
     status_text.text("All documents processed!")
 
+def founder_simulation_section():
+    """Founder simulation section - shows after analysis completion"""
+    # Only show if analysis has been completed successfully
+    if ('analysis' not in st.session_state.processing_status or 
+        st.session_state.processing_status['analysis'].get('status') != 'success'):
+        return
+    
+    company_name = get_company_name_from_session()
+    if not company_name:
+        return
+    
+    # Check if founders-checklist.md exists
+    company_dir = Path("outputs") / company_name
+    checklist_file = company_dir / "founders-checklist.md"
+    
+    if not checklist_file.exists():
+        st.warning("⚠️ founders-checklist.md not found. Cannot proceed with founder simulation.")
+        return
+    
+    st.header("🎭 Founder Simulation")
+    st.markdown("Simulate founder responses to the investment questionnaire using AI or upload direct Q&A responses.")
+    
+    # Two options for founder simulation
+    simulation_option = st.radio(
+        "Choose simulation method:",
+        [
+            "📚 Upload Reference Documents for AI Simulation",
+            "📝 Upload Direct Q&A Document"
+        ],
+        help="Choose how you want to generate founder responses"
+    )
+    
+    if simulation_option == "📚 Upload Reference Documents for AI Simulation":
+        reference_documents_section(company_name, str(company_dir))
+    else:
+        direct_qa_section(company_name, str(company_dir))
+
+def reference_documents_section(company_name: str, company_dir: str):
+    """Handle reference documents upload and processing"""
+    st.subheader("📚 Reference Documents Upload")
+    st.markdown("Upload documents like investment memos, company updates, or founder interviews for AI simulation.")
+    
+    uploaded_files = st.file_uploader(
+        "Choose reference document files",
+        type=['pdf', 'doc', 'docx', 'txt'],
+        accept_multiple_files=True,
+        help="Upload reference documents for AI-powered founder response simulation",
+        key="ref_docs_uploader"
+    )
+    
+    if uploaded_files:
+        st.write(f"**{len(uploaded_files)} reference document(s) selected:**")
+        for file in uploaded_files:
+            st.write(f"- {file.name} ({file.size / (1024*1024):.2f} MB)")
+        
+        # Show existing ref-data files if any
+        ref_data_dir = Path(company_dir) / "ref-data"
+        if ref_data_dir.exists():
+            existing_files = list(ref_data_dir.glob("*.md"))
+            if existing_files:
+                with st.expander("📋 Existing Reference Documents"):
+                    for file in existing_files:
+                        st.write(f"- {file.name}")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📤 Process Reference Documents", type="primary", key="process_ref_docs"):
+                process_reference_documents(uploaded_files, company_dir)
+        
+        with col2:
+            # Check if we have processed ref documents and can run simulation
+            if ref_data_dir.exists() and list(ref_data_dir.glob("*.md")):
+                if st.button("🤖 Run AI Simulation", type="secondary", key="run_ai_simulation"):
+                    run_founder_simulation(company_dir)
+
+def direct_qa_section(company_name: str, company_dir: str):
+    """Handle direct Q&A document upload and processing"""
+    st.subheader("📝 Direct Q&A Document Upload")
+    st.markdown("Upload a document containing question-answer pairs already answered by the founder.")
+    
+    uploaded_file = st.file_uploader(
+        "Choose Q&A document file",
+        type=['pdf', 'doc', 'docx', 'txt'],
+        help="Upload a document with founder's direct responses to questions",
+        key="qa_doc_uploader"
+    )
+    
+    if uploaded_file:
+        st.write(f"**Selected file:** {uploaded_file.name} ({uploaded_file.size / (1024*1024):.2f} MB)")
+        
+        if st.button("📝 Process Q&A Document", type="primary", key="process_qa_doc"):
+            process_qa_document(uploaded_file, company_dir)
+
+def process_reference_documents(uploaded_files, company_dir: str):
+    """Process uploaded reference documents"""
+    with st.spinner("🔄 Processing reference documents..."):
+        try:
+            processor = RefDocProcessor()
+            result = processor.process_reference_documents(uploaded_files, company_dir)
+            
+            if result.success:
+                st.success(f"✅ Successfully processed {result.metadata['successful_files']} reference documents!")
+                st.info(f"📁 Documents saved to: {result.output_file}")
+                
+                # Update session state
+                st.session_state.processing_status['ref_docs'] = {
+                    'status': 'success',
+                    'result': result,
+                    'ref_data_dir': result.output_file
+                }
+                
+                if result.metadata['failed_files'] > 0:
+                    st.warning(f"⚠️ {result.metadata['failed_files']} files failed to process")
+                    with st.expander("View failed files"):
+                        for failed in result.metadata['failed_file_details']:
+                            st.write(f"**{failed['filename']}:** {failed['error']}")
+                
+            else:
+                st.error(f"❌ Reference document processing failed: {result.error_message}")
+                st.session_state.processing_status['ref_docs'] = {
+                    'status': 'failed',
+                    'error': result.error_message
+                }
+                
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+
+def process_qa_document(uploaded_file, company_dir: str):
+    """Process uploaded Q&A document"""
+    with st.spinner("🔄 Processing Q&A document..."):
+        try:
+            processor = QADocProcessor()
+            result = processor.process_qa_document(uploaded_file, company_dir)
+            
+            if result.success:
+                st.success(f"✅ Q&A document processed successfully!")
+                st.info(f"📄 Output saved to: {result.output_file}")
+                
+                # Update session state
+                st.session_state.processing_status['qa_simulation'] = {
+                    'status': 'success',
+                    'result': result,
+                    'output_file': result.output_file,
+                    'simulation_type': 'direct_qa'
+                }
+                
+                # Show some stats
+                if result.metadata:
+                    st.write("**Processing Summary:**")
+                    st.write(f"- Q&A pairs extracted: {result.metadata.get('qa_pairs_extracted', 0)}")
+                    st.write(f"- Responses generated: {result.metadata.get('responses_generated', 0)}")
+                
+            else:
+                st.error(f"❌ Q&A document processing failed: {result.error_message}")
+                st.session_state.processing_status['qa_simulation'] = {
+                    'status': 'failed',
+                    'error': result.error_message
+                }
+                
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+
+def run_founder_simulation(company_dir: str):
+    """Run AI-powered founder simulation"""
+    with st.spinner("🤖 Running AI founder simulation... This may take several minutes."):
+        try:
+            agent = FounderSimulationAgent()
+            result = agent.process_simulation(company_dir)
+            
+            if result.success:
+                st.success(f"✅ Founder simulation completed successfully!")
+                st.info(f"📄 Output saved to: {result.output_file}")
+                
+                # Update session state
+                st.session_state.processing_status['ai_simulation'] = {
+                    'status': 'success',
+                    'result': result,
+                    'output_file': result.output_file,
+                    'simulation_type': 'ai_simulation'
+                }
+                
+                # Show simulation stats
+                if result.metadata:
+                    st.write("**Simulation Summary:**")
+                    st.write(f"- Reference documents used: {result.metadata.get('reference_doc_count', 0)}")
+                    st.write(f"- Questions answered: {result.metadata.get('questions_answered', 0)}")
+                    st.write(f"- Average confidence: {result.metadata.get('average_confidence', 0):.1%}")
+                
+            else:
+                st.error(f"❌ Founder simulation failed: {result.error_message}")
+                st.session_state.processing_status['ai_simulation'] = {
+                    'status': 'failed',
+                    'error': result.error_message
+                }
+                
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+
 def display_results():
     """Display processing results and output file links"""
     if st.session_state.processing_status:
@@ -356,6 +561,13 @@ def display_results():
         # Display analysis results
         if 'analysis' in st.session_state.processing_status:
             display_analysis_results()
+        
+        # Display founder simulation results
+        if 'ai_simulation' in st.session_state.processing_status:
+            display_ai_simulation_results()
+        
+        if 'qa_simulation' in st.session_state.processing_status:
+            display_qa_simulation_results()
 
 def display_pitch_deck_results():
     """Display pitch deck processing results"""
@@ -518,6 +730,86 @@ def check_and_display_questionnaire_download(company_name: str, analysis_dir: st
         
     else:
         st.info("📋 Questionnaire not yet generated. Run analysis to create it.")
+
+def display_ai_simulation_results():
+    """Display AI simulation results"""
+    result = st.session_state.processing_status['ai_simulation']
+    
+    with st.expander("🤖 AI Founder Simulation Results", expanded=True):
+        if result['status'] == 'success':
+            st.success("AI founder simulation completed successfully!")
+            
+            simulation_result = result['result']
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Simulation Type:** AI-Powered")
+                st.write(f"**Output File:** {simulation_result.output_file}")
+                st.write(f"**Processing Time:** {simulation_result.processing_time:.1f}s")
+            
+            with col2:
+                if simulation_result.metadata:
+                    st.write(f"**Reference Documents:** {simulation_result.metadata.get('reference_doc_count', 0)}")
+                    st.write(f"**Questions Answered:** {simulation_result.metadata.get('questions_answered', 0)}")
+                    st.write(f"**Average Confidence:** {simulation_result.metadata.get('average_confidence', 0):.1%}")
+            
+            # Provide download link
+            if simulation_result.output_file and os.path.exists(simulation_result.output_file):
+                with open(simulation_result.output_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                st.download_button(
+                    label="📋 Download Founder Responses",
+                    data=content,
+                    file_name="ans-founders-checklist.md",
+                    mime="text/markdown",
+                    help="Download the AI-generated founder responses"
+                )
+                
+                st.write("**📁 Access your file at:**")
+                st.code(simulation_result.output_file)
+        else:
+            st.error(f"AI simulation failed: {result.get('error', 'Unknown error')}")
+
+def display_qa_simulation_results():
+    """Display Q&A simulation results"""
+    result = st.session_state.processing_status['qa_simulation']
+    
+    with st.expander("📝 Q&A Document Processing Results", expanded=True):
+        if result['status'] == 'success':
+            st.success("Q&A document processed successfully!")
+            
+            simulation_result = result['result']
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Simulation Type:** Direct Q&A Upload")
+                st.write(f"**Output File:** {simulation_result.output_file}")
+                st.write(f"**Processing Time:** {simulation_result.processing_time:.1f}s")
+            
+            with col2:
+                if simulation_result.metadata:
+                    st.write(f"**Q&A Pairs Extracted:** {simulation_result.metadata.get('qa_pairs_extracted', 0)}")
+                    st.write(f"**Responses Generated:** {simulation_result.metadata.get('responses_generated', 0)}")
+                    st.write(f"**Source Document:** {simulation_result.metadata.get('source_document', 'Unknown')}")
+            
+            # Provide download link
+            if simulation_result.output_file and os.path.exists(simulation_result.output_file):
+                with open(simulation_result.output_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                st.download_button(
+                    label="📋 Download Founder Responses",
+                    data=content,
+                    file_name="ans-founders-checklist.md",
+                    mime="text/markdown",
+                    help="Download the processed founder responses"
+                )
+                
+                st.write("**📁 Access your file at:**")
+                st.code(simulation_result.output_file)
+        else:
+            st.error(f"Q&A processing failed: {result.get('error', 'Unknown error')}")
 
 def save_temp_file(uploaded_file) -> str:
     """Save uploaded file to temporary location"""

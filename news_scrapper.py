@@ -10,7 +10,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 
 # Configure the Gemini API key from environment variables
 try:
-    api_key = os.environ["GEMINI_API_KEY"]
+    api_key = os.environ["GOOGLE_API_KEY"]
     if not api_key:
         raise ValueError("GEMINI_API_KEY is not set in the environment.")
     genai.configure(api_key=api_key)

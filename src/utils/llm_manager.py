@@ -332,6 +332,36 @@ class LLMManager:
             "rate_limit_interval": self.min_request_interval,
             "api_configured": bool(os.getenv("GOOGLE_API_KEY"))
         }
+    
+    @retry_with_backoff()
+    def generate_founder_responses(self, prompt: str) -> str:
+        """
+        Generate founder responses for questionnaire simulation
+        
+        Args:
+            prompt: Formatted prompt for founder response simulation
+            
+        Returns:
+            Generated response string
+        """
+        try:
+            logger.info("Generating founder responses using Gemini...")
+            
+            # Rate limiting
+            self._rate_limit()
+            
+            model = genai.GenerativeModel(self.gemini_model)
+            response = model.generate_content(prompt)
+            
+            if not response or not response.text:
+                raise LLMConnectionError("Empty response from Gemini API")
+            
+            logger.info("Successfully generated founder responses")
+            return response.text.strip()
+            
+        except Exception as e:
+            logger.error(f"Error generating founder responses: {e}")
+            raise LLMConnectionError(f"Failed to generate founder responses: {e}")
 
 # Global instance for backward compatibility
 llm_manager = LLMManager()
