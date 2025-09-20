@@ -45,7 +45,6 @@ class FinalMemoAgent(BaseAnalysisAgent):
         super().__init__(
             agent_name="FinalMemoAgent",
             llm=llm,
-            temperature=config.temperature if config else 0.3,
             **kwargs
         )
         
@@ -86,6 +85,7 @@ class FinalMemoAgent(BaseAnalysisAgent):
                 success=True,
                 memo_content=memo_content,
                 output_file="",  # Will be set by processor
+                pdf_file="",  # Will be set by processor if PDF is generated
                 processing_time=processing_time,
                 metadata={
                     "agent_count": len(request.agents),
@@ -112,6 +112,7 @@ class FinalMemoAgent(BaseAnalysisAgent):
                 success=False,
                 error_message=error_msg,
                 processing_time=processing_time,
+                pdf_file="",
                 metadata={
                     "company_name": request.company_name,
                     "error_timestamp": datetime.now().isoformat(),
@@ -285,6 +286,8 @@ Write a professional, balanced investment memo that appropriately weights each a
         Implement abstract method from BaseAnalysisAgent
         This agent doesn't analyze documents directly, but generates memos from requests
         """
+        # Suppress unused parameter warnings
+        _ = document, kwargs
         raise NotImplementedError("FinalMemoAgent uses generate_final_memo() instead of analyze()")
 
 
@@ -299,8 +302,13 @@ def create_final_memo_agent(config: Optional[FinalMemoConfig] = None) -> FinalMe
         Configured FinalMemoAgent instance
     """
     try:
-        from src.utils.llm_setup import get_llm
-        llm = get_llm()
+        from src.utils.llm_setup import create_custom_llm
+        
+        # Get temperature from config
+        temperature = config.temperature if config else 0.3
+        
+        # Create LLM with the specified temperature
+        llm = create_custom_llm(temperature=temperature)
         return FinalMemoAgent(llm=llm, config=config)
     except Exception as e:
         logger.warning(f"Failed to create LLM instance, using default: {e}")

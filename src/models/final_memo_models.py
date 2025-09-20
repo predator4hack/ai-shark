@@ -90,12 +90,12 @@ class FinalMemoResult(BaseModel):
         default="",
         description="Path to the saved markdown file"
     )
-    pdf_file: Optional[str] = Field(
-        None,
+    pdf_file: str = Field(
+        default="",
         description="Path to the generated PDF file"
     )
-    error_message: Optional[str] = Field(
-        None,
+    error_message: str = Field(
+        default="",
         description="Error message if generation failed"
     )
     processing_time: float = Field(
@@ -103,8 +103,8 @@ class FinalMemoResult(BaseModel):
         description="Time taken to generate the memo in seconds",
         ge=0
     )
-    metadata: Optional[Dict[str, Any]] = Field(
-        None,
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
         description="Additional metadata about the generation process"
     )
     timestamp: datetime = Field(

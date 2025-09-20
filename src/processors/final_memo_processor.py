@@ -292,7 +292,8 @@ class FinalMemoProcessor:
             if not request:
                 return FinalMemoResult(
                     success=False,
-                    error_message="Failed to create memo request. Check that ans-founders-checklist.md exists and analysis files are available."
+                    error_message="Failed to create memo request. Check that ans-founders-checklist.md exists and analysis files are available.",
+                    pdf_file=""
                 )
             
             # Generate memo using agent
@@ -319,7 +320,8 @@ class FinalMemoProcessor:
             return FinalMemoResult(
                 success=False,
                 error_message=error_msg,
-                processing_time=0.0
+                processing_time=0.0,
+                pdf_file=""
             )
     
     def _save_memo_file(self, memo_content: str, company_dir: str, company_name: str) -> str:

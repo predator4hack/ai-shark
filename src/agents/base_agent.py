@@ -232,18 +232,18 @@ class BaseAnalysisAgent(ABC):
             LLM response as string
         """
         try:
-            # Override temperature if specified
-            if self.temperature is not None:
-                kwargs['temperature'] = self.temperature
+            # Note: Temperature should be set during LLM initialization, not invocation
+            # Remove temperature from kwargs if present to avoid invoke() errors
+            invoke_kwargs = {k: v for k, v in kwargs.items() if k != 'temperature'}
 
             # Check if we have a mock LLM (for testing)
             if hasattr(self.llm, 'invoke') and hasattr(self.llm, 'call_count'):
                 # This is our MockLLM
-                response_obj = self.llm.invoke(prompt, **kwargs)
+                response_obj = self.llm.invoke(prompt, **invoke_kwargs)
                 response = response_obj.content
             else:
                 # Use the real LLM setup
-                response = llm_setup.invoke_with_retry(self.llm, prompt, **kwargs)
+                response = llm_setup.invoke_with_retry(self.llm, prompt, **invoke_kwargs)
 
             if not response or not response.strip():
                 raise AnalysisError("LLM returned empty response")
