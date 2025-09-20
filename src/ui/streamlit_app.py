@@ -8,6 +8,7 @@ from src.processors.pitch_deck_processor import PitchDeckProcessor
 from src.processors.additional_doc_processor import AdditionalDocProcessor
 from src.processors.analysis_pipeline import AnalysisPipeline
 from src.utils.output_manager import OutputManager
+from src.utils.docx_converter import convert_founders_checklist_to_docx, is_docx_conversion_available
 
 def main():
     """Main Streamlit application"""
@@ -447,12 +448,76 @@ def display_analysis_results():
                 for agent in result['failed_agents']:
                     st.write(f"- {agent.title()} Analysis Agent")
             
+            # Check for questionnaire file and provide download
+            check_and_display_questionnaire_download(result.get('company_name'), result['analysis_dir'])
+            
             # Provide access information
             st.write("**📁 Access your analysis files at:**")
             st.code(result['analysis_dir'])
                 
         else:
             st.error(f"Analysis failed: {result.get('error', 'Unknown error')}")
+
+def check_and_display_questionnaire_download(company_name: str, analysis_dir: str):
+    """Check for questionnaire file and display download options"""
+    if not company_name or not analysis_dir:
+        return
+    
+    # Look for questionnaire file in company directory (parent of analysis_dir)
+    company_dir = Path(analysis_dir).parent
+    questionnaire_file = company_dir / "founders-checklist.md"
+    
+    if questionnaire_file.exists():
+        st.write("**📋 Founder Investment Questionnaire Available**")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Read file content for download
+            with open(questionnaire_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            st.download_button(
+                label="📋 Download Questionnaire (Markdown)",
+                data=content,
+                file_name=f"{company_name}-founders-checklist.md",
+                mime="text/markdown",
+                help="Download the questionnaire as a Markdown file"
+            )
+        
+        with col2:
+            # DOCX download option
+            if is_docx_conversion_available():
+                if st.button("📄 Generate & Download DOCX", help="Convert and download as Word document"):
+                    try:
+                        with st.spinner("Converting to DOCX..."):
+                            docx_file = convert_founders_checklist_to_docx(str(questionnaire_file))
+                            
+                            # Read DOCX file for download
+                            with open(docx_file, 'rb') as f:
+                                docx_content = f.read()
+                            
+                            st.download_button(
+                                label="💾 Download DOCX File",
+                                data=docx_content,
+                                file_name=f"{company_name}-founders-checklist.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+                            
+                            st.success("✅ DOCX file generated successfully!")
+                            
+                    except Exception as e:
+                        st.error(f"❌ DOCX conversion failed: {e}")
+            else:
+                st.info("📄 DOCX conversion requires python-docx package")
+                st.code("pip install python-docx")
+        
+        # Show file info
+        file_size = questionnaire_file.stat().st_size
+        st.write(f"**File Info:** {file_size:,} bytes, Modified: {questionnaire_file.stat().st_mtime}")
+        
+    else:
+        st.info("📋 Questionnaire not yet generated. Run analysis to create it.")
 
 def save_temp_file(uploaded_file) -> str:
     """Save uploaded file to temporary location"""

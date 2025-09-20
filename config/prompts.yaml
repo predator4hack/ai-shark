@@ -295,40 +295,7 @@ prompts:
             - **Actionable intelligence:** Each question should lead to information that directly influences the investment decision
 
             **Analysis Reports Provided:**
-            {% if business_analysis %}
-            **Business Analysis Report:**
-            ---
-            {{business_analysis}}
-            ---
-            {% endif %}
-
-            {% if market_analysis %}
-            **Market Analysis Report:**
-            ---
-            {{market_analysis}}
-            ---
-            {% endif %}
-
-            {% if financial_analysis %}
-            **Financial Analysis Report:**
-            ---
-            {{financial_analysis}}
-            ---
-            {% endif %}
-
-            {% if competitive_analysis %}
-            **Competitive Analysis Report:**
-            ---
-            {{competitive_analysis}}
-            ---
-            {% endif %}
-
-            {% if technology_analysis %}
-            **Technology Analysis Report:**
-            ---
-            {{technology_analysis}}
-            ---
-            {% endif %}
+            {{analysis_reports}}
 
             **Investigation Framework - Focus on These Critical Areas:**
 
