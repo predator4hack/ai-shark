@@ -10,6 +10,40 @@ from datetime import datetime
 from pathlib import Path
 
 
+def create_analysis_report_collection_from_dict(
+    reports_dict: Dict[str, str], 
+    company_name: Optional[str] = None,
+    company_dir: str = ""
+) -> "AnalysisReportCollection":
+    """
+    Create AnalysisReportCollection from a dictionary of reports (analysis_loader output)
+    
+    Args:
+        reports_dict: Dictionary with report types as keys and content as values
+        company_name: Optional company name
+        company_dir: Path to company directory
+        
+    Returns:
+        AnalysisReportCollection instance
+    """
+    reports = {}
+    
+    for report_type, content in reports_dict.items():
+        if content and content.strip():
+            report = AnalysisReport(
+                report_type=report_type,
+                content=content,
+                file_path=None  # analysis_loader doesn't provide file paths
+            )
+            reports[report_type] = report
+    
+    return AnalysisReportCollection(
+        reports=reports,
+        company_name=company_name,
+        company_dir=company_dir
+    )
+
+
 @dataclass
 class QuestionnaireConfig:
     """Configuration for questionnaire generation"""

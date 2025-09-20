@@ -10,16 +10,17 @@ import time
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Optional
 
 from ..utils.llm_manager import LLMManager
 from ..utils.prompt_manager import PromptManager
+from ..utils.analysis_loader import load_analysis_reports, extract_company_name
 from ..models.questionnaire_models import (
     QuestionnaireConfig, 
-    AnalysisReport, 
     AnalysisReportCollection,
     QuestionnaireResult,
-    validate_questionnaire_content
+    validate_questionnaire_content,
+    create_analysis_report_collection_from_dict
 )
 from ..utils.docx_converter import convert_founders_checklist_to_docx, is_docx_conversion_available
 
@@ -42,7 +43,7 @@ class QuestionnaireAgent:
         
     def load_analysis_reports(self, company_dir: str) -> AnalysisReportCollection:
         """
-        Load all analysis reports from company's analysis directory
+        Load all analysis reports from company's analysis directory using analysis_loader
         
         Args:
             company_dir: Path to the company directory (e.g., "outputs/company-name")
@@ -54,66 +55,29 @@ class QuestionnaireAgent:
             FileNotFoundError: If analysis directory doesn't exist
             ValueError: If no valid reports found
         """
-        company_path = Path(company_dir)
-        analysis_dir = company_path / "analysis"
-        
-        if not analysis_dir.exists():
-            raise FileNotFoundError(f"Analysis directory not found: {analysis_dir}")
-        
-        # Extract company name from directory
-        company_name = company_path.name
-        
-        print(f"📁 Loading analysis reports from: {analysis_dir}")
-        
-        reports = {}
-        analysis_files = list(analysis_dir.glob("*.md"))
-        
-        # Filter out summary files
-        analysis_files = [f for f in analysis_files if f.name != "analysis_summary.md"]
-        
-        if not analysis_files:
-            raise ValueError(f"No analysis reports found in: {analysis_dir}")
-        
-        for file_path in analysis_files:
-            try:
-                print(f"📖 Loading: {file_path.name}")
-                
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                # Extract report type from filename (e.g., "business_analysis.md" -> "business_analysis")
-                report_type = file_path.stem
-                
-                if content.strip():
-                    report = AnalysisReport(
-                        report_type=report_type,
-                        content=content,
-                        file_path=str(file_path)
-                    )
-                    
-                    if report.is_valid:
-                        reports[report_type] = report
-                        print(f"   ✅ Loaded: {report.summary}")
-                    else:
-                        print(f"   ⚠️ Invalid report content: {file_path.name}")
-                else:
-                    print(f"   ⚠️ Empty file skipped: {file_path.name}")
-                    
-            except Exception as e:
-                print(f"   ❌ Error loading {file_path.name}: {e}")
-                continue
-        
-        if not reports:
-            raise ValueError(f"No valid analysis reports found in: {analysis_dir}")
-        
-        collection = AnalysisReportCollection(
-            reports=reports,
-            company_name=company_name,
-            company_dir=str(company_path)
-        )
-        
-        print(f"\n✅ {collection.summary}")
-        return collection
+        try:
+            # Use analysis_loader as the single source of truth
+            reports_dict = load_analysis_reports(company_dir)
+            
+            # Extract company name from directory
+            company_name = extract_company_name(company_dir)
+            
+            # Convert to rich data model
+            collection = create_analysis_report_collection_from_dict(
+                reports_dict=reports_dict,
+                company_name=company_name,
+                company_dir=company_dir
+            )
+            
+            print(f"\n✅ {collection.summary}")
+            return collection
+            
+        except Exception as e:
+            # Re-raise with consistent error types for backwards compatibility
+            if "not found" in str(e).lower() or "does not exist" in str(e).lower():
+                raise FileNotFoundError(str(e))
+            else:
+                raise ValueError(str(e))
     
     def generate_questionnaire(self, report_collection: AnalysisReportCollection, 
                              config: QuestionnaireConfig) -> QuestionnaireResult:
