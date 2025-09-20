@@ -10,8 +10,10 @@ from src.processors.analysis_pipeline import AnalysisPipeline
 from src.processors.ref_doc_processor import RefDocProcessor
 from src.processors.qa_doc_processor import QADocProcessor
 from src.agents.founder_simulation_agent import FounderSimulationAgent
+from src.processors.final_memo_processor import create_final_memo_processor
 from src.utils.output_manager import OutputManager
 from src.utils.docx_converter import convert_founders_checklist_to_docx, is_docx_conversion_available
+from src.utils.pdf_generator import convert_markdown_to_pdf, is_pdf_generation_available
 
 def main():
     """Main Streamlit application"""
@@ -44,6 +46,9 @@ def main():
     
     # Founder simulation section (shows after analysis completion)
     founder_simulation_section()
+    
+    # Final memo section (shows after founder simulation completion)
+    final_memo_section()
     
     # Display results below
     display_results()
@@ -568,6 +573,10 @@ def display_results():
         
         if 'qa_simulation' in st.session_state.processing_status:
             display_qa_simulation_results()
+        
+        # Display final memo results
+        if 'final_memo' in st.session_state.processing_status:
+            display_final_memo_results()
 
 def display_pitch_deck_results():
     """Display pitch deck processing results"""
@@ -811,6 +820,72 @@ def display_qa_simulation_results():
         else:
             st.error(f"Q&A processing failed: {result.get('error', 'Unknown error')}")
 
+def display_final_memo_results():
+    """Display final memo results with download options"""
+    if 'final_memo' not in st.session_state.processing_status:
+        return
+    
+    result_info = st.session_state.processing_status['final_memo']
+    
+    with st.expander("📈 Final Investment Memo Results", expanded=True):
+        if result_info['status'] == 'success':
+            result = result_info['result']
+            
+            st.success("Final investment memo generated successfully!")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**Memo File:** {result.output_file}")
+                st.write(f"**Processing Time:** {result.processing_time:.2f} seconds")
+                st.write(f"**Content Length:** {len(result.memo_content):,} characters")
+            
+            with col2:
+                st.write("**Agent Weights Used:**")
+                for agent, weight in result_info['agent_weights'].items():
+                    st.write(f"- {agent}: {weight}%")
+            
+            # Download options
+            st.subheader("📥 Download Options")
+            
+            download_col1, download_col2 = st.columns(2)
+            
+            with download_col1:
+                # Markdown download
+                st.download_button(
+                    label="📋 Download Memo (Markdown)",
+                    data=result.memo_content,
+                    file_name=f"{result.metadata.get('company_name', 'company')}-investment-memo.md",
+                    mime="text/markdown",
+                    help="Download the investment memo as a Markdown file"
+                )
+            
+            with download_col2:
+                # PDF download (if available)
+                if result.pdf_file and os.path.exists(result.pdf_file):
+                    with open(result.pdf_file, 'rb') as f:
+                        pdf_content = f.read()
+                    
+                    st.download_button(
+                        label="📄 Download Memo (PDF)",
+                        data=pdf_content,
+                        file_name=f"{result.metadata.get('company_name', 'company')}-investment-memo.pdf",
+                        mime="application/pdf",
+                        help="Download the investment memo as a PDF file"
+                    )
+                else:
+                    if is_pdf_generation_available():
+                        st.info("📄 PDF generation failed, markdown version available")
+                    else:
+                        st.info("📄 PDF generation not available (install weasyprint or pdfkit)")
+            
+            # Memo preview
+            with st.expander("👁️ Memo Preview"):
+                st.markdown(result.memo_content)
+                
+        else:
+            st.error(f"Final memo generation failed: {result_info.get('error', 'Unknown error')}")
+
 def save_temp_file(uploaded_file) -> str:
     """Save uploaded file to temporary location"""
     with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp_file:
@@ -829,6 +904,222 @@ def get_company_name_from_session() -> str | None:
             return result['company_name']
     
     return None
+
+def final_memo_section():
+    """Final investment memo generation section - shows after founder simulation completion"""
+    # Check if founder simulation has been completed
+    if not _check_final_memo_prerequisites():
+        return
+    
+    company_name = get_company_name_from_session()
+    if not company_name:
+        return
+    
+    company_dir = Path("outputs") / company_name
+    
+    st.header("📈 Final Investment Memo")
+    st.markdown("Generate a comprehensive investment memo based on weighted analysis from multiple agents.")
+    
+    # Create processor and check prerequisites
+    processor = create_final_memo_processor()
+    prerequisites_met, issues = processor.check_prerequisites(str(company_dir))
+    
+    if not prerequisites_met:
+        st.warning("⚠️ Prerequisites not met for final memo generation:")
+        for issue in issues:
+            st.write(f"- {issue}")
+        return
+    
+    # Get available agents
+    available_agents = processor.get_available_agents(str(company_dir))
+    
+    if not available_agents:
+        st.error("❌ No analysis agents found. Please run multi-agent analysis first.")
+        return
+    
+    st.success(f"✅ Found {len(available_agents)} analysis agents ready for memo generation")
+    
+    with st.expander("📋 Available Analysis Agents", expanded=True):
+        st.write("**Available agents for final memo generation:**")
+        for agent in available_agents:
+            st.write(f"- {agent}")
+    
+    # Weight input section
+    st.subheader("⚖️ Agent Weight Configuration")
+    st.markdown("Assign weights to each agent (must sum to 100%). Higher weights give more influence in the final memo.")
+    
+    # Initialize session state for weights
+    if 'agent_weights' not in st.session_state:
+        # Default equal weights
+        default_weight = 100 // len(available_agents)
+        remainder = 100 % len(available_agents)
+        
+        st.session_state.agent_weights = {}
+        for i, agent in enumerate(available_agents):
+            weight = default_weight + (1 if i < remainder else 0)
+            st.session_state.agent_weights[agent] = weight
+    
+    # Create weight input controls
+    agent_weights = {}
+    total_weight = 0
+    
+    # Create columns for better layout
+    cols = st.columns(min(3, len(available_agents)))
+    
+    for i, agent in enumerate(available_agents):
+        col_idx = i % len(cols)
+        with cols[col_idx]:
+            weight = st.number_input(
+                f"{agent}",
+                min_value=0,
+                max_value=100,
+                value=st.session_state.agent_weights.get(agent, 0),
+                step=1,
+                key=f"weight_{agent}",
+                help=f"Weight percentage for {agent} analysis"
+            )
+            agent_weights[agent] = weight
+            total_weight += weight
+    
+    # Real-time validation
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        if total_weight == 100:
+            st.success(f"✅ Total weight: {total_weight}% (Perfect!)")
+            weights_valid = True
+        elif total_weight < 100:
+            remaining = 100 - total_weight
+            st.warning(f"⚠️ Total weight: {total_weight}% (Need {remaining}% more)")
+            weights_valid = False
+        else:
+            excess = total_weight - 100
+            st.error(f"❌ Total weight: {total_weight}% ({excess}% over limit)")
+            weights_valid = False
+    
+    with col2:
+        if st.button("🔄 Auto-Balance", help="Automatically balance weights to sum to 100%"):
+            _auto_balance_weights(available_agents)
+            st.rerun()
+    
+    # Update session state
+    st.session_state.agent_weights = agent_weights
+    
+    # Generate memo button
+    if weights_valid:
+        if st.button("🚀 Generate Final Investment Memo", type="primary", key="generate_final_memo"):
+            generate_final_memo(str(company_dir), agent_weights)
+    else:
+        st.button("🚀 Generate Final Investment Memo", disabled=True, 
+                 help="Fix weight validation errors first")
+
+def _check_final_memo_prerequisites() -> bool:
+    """Check if prerequisites for final memo are met"""
+    # Check if founder simulation has been completed
+    has_ai_simulation = ('ai_simulation' in st.session_state.processing_status and 
+                        st.session_state.processing_status['ai_simulation'].get('status') == 'success')
+    
+    has_qa_simulation = ('qa_simulation' in st.session_state.processing_status and 
+                        st.session_state.processing_status['qa_simulation'].get('status') == 'success')
+    
+    # Check if analysis has been completed
+    has_analysis = ('analysis' in st.session_state.processing_status and 
+                   st.session_state.processing_status['analysis'].get('status') == 'success')
+    
+    return (has_ai_simulation or has_qa_simulation) and has_analysis
+
+def _auto_balance_weights(available_agents: list):
+    """Automatically balance weights to sum to 100%"""
+    if not available_agents:
+        return
+    
+    # Equal distribution with remainder handling
+    base_weight = 100 // len(available_agents)
+    remainder = 100 % len(available_agents)
+    
+    for i, agent in enumerate(available_agents):
+        weight = base_weight + (1 if i < remainder else 0)
+        st.session_state.agent_weights[agent] = weight
+
+def generate_final_memo(company_dir: str, agent_weights: Dict[str, int]):
+    """Generate final investment memo"""
+    with st.spinner("📝 Generating final investment memo... This may take several minutes."):
+        try:
+            # Create processor and generate memo
+            processor = create_final_memo_processor()
+            result = processor.generate_memo(company_dir, agent_weights)
+            
+            if result.success:
+                # Store result in session state
+                st.session_state.processing_status['final_memo'] = {
+                    'status': 'success',
+                    'result': result,
+                    'company_dir': company_dir,
+                    'agent_weights': agent_weights
+                }
+                
+                st.success(f"✅ Final investment memo generated successfully!")
+                st.info(f"📄 Memo saved to: {result.output_file}")
+                st.info(f"⏱️ Processing time: {result.processing_time:.2f} seconds")
+                
+                # Show generation stats
+                if result.metadata:
+                    with st.expander("📊 Generation Statistics"):
+                        metadata = result.metadata
+                        st.write(f"**Company:** {metadata.get('company_name', 'Unknown')}")
+                        st.write(f"**Agents Used:** {metadata.get('agent_count', 0)}")
+                        st.write(f"**Total Analysis Content:** {metadata.get('total_analysis_chars', 0):,} characters")
+                        st.write(f"**Founders Checklist Content:** {metadata.get('founders_checklist_chars', 0):,} characters")
+                        st.write(f"**Generation Time:** {metadata.get('generation_timestamp', 'Unknown')}")
+                        
+                        if 'agent_weights' in metadata:
+                            st.write("**Agent Weights Used:**")
+                            for agent, weight in metadata['agent_weights'].items():
+                                st.write(f"- {agent}: {weight}%")
+                
+                # Generate PDF version
+                _generate_memo_pdf(result)
+                
+            else:
+                st.error(f"❌ Failed to generate final memo: {result.error_message}")
+                st.session_state.processing_status['final_memo'] = {
+                    'status': 'failed',
+                    'error': result.error_message
+                }
+                
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+            st.session_state.processing_status['final_memo'] = {
+                'status': 'failed',
+                'error': str(e)
+            }
+
+def _generate_memo_pdf(result):
+    """Generate PDF version of the memo"""
+    if not is_pdf_generation_available():
+        st.warning("📄 PDF generation not available. Install weasyprint or pdfkit for PDF support.")
+        return
+    
+    try:
+        # Create PDF file path
+        pdf_path = result.output_file.replace('.md', '.pdf')
+        
+        # Generate PDF
+        success = convert_markdown_to_pdf(
+            result.memo_content, 
+            pdf_path, 
+            f"Investment Memo - {result.metadata.get('company_name', 'Company')}"
+        )
+        
+        if success:
+            # Update result with PDF path
+            result.pdf_file = pdf_path
+            st.success("📄 PDF version generated successfully!")
+        else:
+            st.warning("⚠️ PDF generation failed, but markdown version is available.")
+            
+    except Exception as e:
+        st.warning(f"⚠️ PDF generation failed: {e}")
 
 # Add sidebar with information
 def add_sidebar():
