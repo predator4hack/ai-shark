@@ -339,3 +339,16 @@ def create_sample_analysis() -> Dict[str, BaseModel]:
         "technology": technology,
         "risk": risk
     }
+
+
+class EvaluationCriterion(BaseModel):
+    """Model for a single evaluation criterion."""
+    criterion: str = Field(..., description="The evaluation criterion, e.g., 'Coverage', 'Specificity'.")
+    score: float = Field(..., ge=0, le=10, description="The score for the criterion, from 0 to 10.")
+    justification: str = Field(..., description="The justification for the score.")
+
+class EvaluationAnalysis(BaseModel):
+    """Model for the evaluation of generated questions."""
+    summary: str = Field(..., description="A summary of the evaluation.")
+    criteria: List[EvaluationCriterion] = Field(..., description="A list of evaluation criteria.")
+    suggestions: List[str] = Field(default_factory=list, description="Suggestions for improving the generated questions.")

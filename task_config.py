@@ -29,7 +29,7 @@ class Config:
     UTILS_DIR: Path = SRC_DIR / "utils"
     TESTS_DIR: Path = PROJECT_ROOT / "tests"
     RESULTS_DIR: Path = PROJECT_ROOT / "results"
-    OUTPUT_DIR: Path = PROJECT_ROOT / "output"
+    OUTPUT_DIR: Path = PROJECT_ROOT / "outputs"
 
     # Logging Configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

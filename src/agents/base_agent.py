@@ -19,7 +19,7 @@ from pydantic import BaseModel, ValidationError
 from src.utils.llm_setup import get_llm, llm_setup
 from src.models.document_models import StartupDocument
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
 logger = logging.getLogger(__name__)
 
 

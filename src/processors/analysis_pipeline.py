@@ -841,7 +841,7 @@ def main():
         print("Using Mock LLM for demonstration (no API key required)")
 
     # Create and run pipeline
-    pipeline = AnalysisPipelineDemo(use_real_llm=use_real_llm, agent_type=agent_type)
+    pipeline = AnalysisPipeline(use_real_llm=use_real_llm, agent_type=agent_type)
     pipeline.run_pipeline()
 
 
