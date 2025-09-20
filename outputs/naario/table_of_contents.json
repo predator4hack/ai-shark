@@ -1,0 +1,49 @@
+{
+  "Problem_Opportunity": [
+    2,
+    3,
+    4,
+    5,
+    8
+  ],
+  "Solution_Product": [
+    7,
+    10,
+    11
+  ],
+  "Market_Size": [
+    6
+  ],
+  "Business_Model": [
+    9
+  ],
+  "Competition_Competitive_Analysis": [
+    12,
+    25
+  ],
+  "Go-to_Market_Strategy": [
+    13,
+    23
+  ],
+  "Traction_Metrics": [
+    14,
+    15
+  ],
+  "Financials_Revenue": [
+    17,
+    22,
+    24
+  ],
+  "Funding_Ask_Investment": [
+    16,
+    18,
+    26
+  ],
+  "Roadmap_Future_Plans": [
+    16,
+    24
+  ],
+  "Team_Founders": [
+    19
+  ]
+}

@@ -37,6 +37,7 @@ dependencies = [
     "ddgs",
     "python-docx>=1.2.0",
     "pypdf2>=3.0.1",
+    "pdfkit>=1.0.0",
 ]
 [build-system]
 requires = ["hatchling"]

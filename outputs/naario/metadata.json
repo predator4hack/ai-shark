@@ -1,0 +1,71 @@
+{
+  "startup_name": "naario",
+  "sector": "Consumer Goods",
+  "sub_sector": "Millet-based Food & Beverage",
+  "website": "https://naario.com",
+  "table_of_contents": {
+    "Problem_Opportunity": [
+      2,
+      3,
+      4,
+      5,
+      8
+    ],
+    "Solution_Product": [
+      7,
+      10,
+      11
+    ],
+    "Market_Size": [
+      6
+    ],
+    "Business_Model": [
+      9
+    ],
+    "Competition_Competitive_Analysis": [
+      12,
+      25
+    ],
+    "Go-to_Market_Strategy": [
+      13,
+      23
+    ],
+    "Traction_Metrics": [
+      14,
+      15
+    ],
+    "Financials_Revenue": [
+      17,
+      22,
+      24
+    ],
+    "Funding_Ask_Investment": [
+      16,
+      18,
+      26
+    ],
+    "Roadmap_Future_Plans": [
+      16,
+      24
+    ],
+    "Team_Founders": [
+      19
+    ]
+  },
+  "questionnaire": {
+    "generated": true,
+    "generated_at": "2025-09-21T03:22:11.723897",
+    "processing_time": 25.644888,
+    "markdown_file": "outputs/naario/founders-checklist.md",
+    "agent": "QuestionnaireAgent",
+    "source_reports": [
+      "business_analysis",
+      "market_analysis"
+    ],
+    "total_reports": 2
+  },
+  "last_updated": "2025-09-21T03:22:11.725549",
+  "processing_status": {
+    "questionnaire_complete": true
+  }
+}
