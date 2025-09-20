@@ -1,0 +1,36 @@
+Given a pitch deck, pitch by voice note etc. presentation deck, pitch deck on video -> Entry point. Or a google form to answer the question
+
+
+1. Generate an investment memo for the startup, bring data from all the sources by scraping, apis, behind the pay walls.
+Market size, competition, founder profile, problem they are trying to solve, uniqueness 
+2. using the memo deck, do the first level of data curation:
+    - Founder profile, founder market fit, why is this the right founder to solve the problem. 
+    - Problem what they are trying to solve, how big is the problem, other competitors. 
+    - Unique differentiator, weightage to differentiator , IP patent file, business model diff, 
+    - Profile of the rest of the team, revenue, cost to build, commitment, time. 
+3. 
+
+Agent 1: scrape the data 
+Agent 2: Maps the data to different parameters
+3: Schedules the call with founder 
+4. Voice agent, talks to the founder and asks more detailed questions 
+
+First memo note is used to create a second memo note, input weightage metrics from founders.
+As investors: they only care about market size or just the founders or just second 
+Take input preferences from the investors
+
+Note: Final decision making will be on the partner of the fund. 
+
+Agent 1:
+ - Extract data from deck
+ - Product services
+ - Founder 
+
+Agent 2:
+ - 
+
+
+ Default Company Page for Individual Developer
+
+ Extraction
+ 
