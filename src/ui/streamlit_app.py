@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from src.processors.pitch_deck_processor import PitchDeckProcessor
 from src.processors.additional_doc_processor import AdditionalDocProcessor
+from src.processors.analysis_pipeline import AnalysisPipeline
 from src.utils.output_manager import OutputManager
 
 def main():
@@ -33,6 +34,9 @@ def main():
     
     with col2:
         additional_docs_section()
+    
+    # Analysis section
+    analysis_section()
     
     # Display results below
     display_results()
@@ -91,6 +95,128 @@ def additional_docs_section():
         # Process button
         if st.button("📝 Process Additional Documents", type="primary", key="process_additional_docs"):
             process_additional_docs(uploaded_files)
+
+def analysis_section():
+    """Analysis pipeline section"""
+    st.header("🧠 AI Analysis")
+    st.markdown("Run comprehensive analysis using multiple AI agents on your processed documents.")
+    
+    # Check if we have a processed pitch deck (minimum requirement)
+    company_name = get_company_name_from_session()
+    if not company_name:
+        st.info("ℹ️ Please process a pitch deck first before running analysis.")
+        return
+    
+    # Check if company directory exists
+    company_dir = Path("outputs") / company_name
+    if not company_dir.exists():
+        st.warning("⚠️ Company directory not found. Please process documents first.")
+        return
+    
+    # Check for required files
+    pitch_deck_file = company_dir / "pitch_deck.md"
+    if not pitch_deck_file.exists():
+        st.warning("⚠️ Pitch deck analysis file not found. Please process the pitch deck first.")
+        return
+    
+    # Show available documents
+    with st.expander("📋 Available Documents for Analysis"):
+        st.write(f"**Company:** {company_name}")
+        st.write(f"**Company Directory:** {company_dir}")
+        
+        # Check what documents are available
+        docs_available = []
+        if pitch_deck_file.exists():
+            docs_available.append("✅ Pitch Deck Analysis")
+        
+        public_data_file = company_dir / "public_data.md"
+        if public_data_file.exists():
+            docs_available.append("✅ Public Data Analysis")
+        else:
+            docs_available.append("⚠️ Public Data Analysis (not available)")
+        
+        additional_docs_dir = company_dir / "additional_docs"
+        if additional_docs_dir.exists() and list(additional_docs_dir.glob("*.md")):
+            additional_files = list(additional_docs_dir.glob("*.md"))
+            docs_available.append(f"✅ Additional Documents ({len(additional_files)} files)")
+        else:
+            docs_available.append("⚠️ Additional Documents (not available)")
+        
+        for doc in docs_available:
+            st.write(f"- {doc}")
+    
+    # Analysis button
+    if st.button("🚀 Run Multi-Agent Analysis", type="primary", key="run_analysis"):
+        run_analysis(company_name, str(company_dir))
+
+def run_analysis(company_name: str, company_dir: str):
+    """Run the multi-agent analysis pipeline"""
+    with st.spinner("🧠 Running multi-agent analysis... This may take several minutes."):
+        try:
+            # Create progress tracking
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            status_text.text("Initializing analysis pipeline...")
+            progress_bar.progress(10)
+            
+            # Initialize the analysis pipeline
+            pipeline = AnalysisPipeline(company_dir=company_dir, use_real_llm=True)
+            
+            status_text.text("Discovering and initializing AI agents...")
+            progress_bar.progress(25)
+            
+            # Show discovered agents
+            agent_names = list(pipeline.agents.keys())
+            st.info(f"🤖 Discovered {len(agent_names)} AI agents: {', '.join([name.title() for name in agent_names])}")
+            
+            status_text.text("Running multi-agent analysis...")
+            progress_bar.progress(50)
+            
+            # Run the analysis pipeline
+            results = pipeline.run_pipeline()
+            
+            progress_bar.progress(100)
+            status_text.text("Analysis complete!")
+            
+            # Update session state
+            if results:
+                st.session_state.processing_status['analysis'] = {
+                    'status': 'success',
+                    'company_name': company_name,
+                    'results': results,
+                    'analysis_dir': str(pipeline.analysis_dir),
+                    'agents_run': list(results.keys()),
+                    'successful_agents': [name for name, result in results.items() if "error" not in result],
+                    'failed_agents': [name for name, result in results.items() if "error" in result]
+                }
+                
+                successful_count = len(st.session_state.processing_status['analysis']['successful_agents'])
+                failed_count = len(st.session_state.processing_status['analysis']['failed_agents'])
+                
+                st.success(f"✅ Analysis completed successfully!")
+                st.info(f"📊 Results: {successful_count} agents succeeded, {failed_count} agents failed")
+                st.info(f"**Analysis Directory:** {pipeline.analysis_dir}")
+                
+                # Show generated files
+                analysis_files = list(pipeline.analysis_dir.glob("*.md"))
+                if analysis_files:
+                    st.write("**Generated Analysis Files:**")
+                    for file_path in analysis_files:
+                        st.write(f"- ✅ {file_path.name}")
+            else:
+                st.error("❌ Analysis failed to produce results")
+                st.session_state.processing_status['analysis'] = {
+                    'status': 'failed',
+                    'error': 'No results generated'
+                }
+                
+        except Exception as e:
+            st.error(f"❌ Analysis failed: {str(e)}")
+            st.session_state.processing_status['analysis'] = {
+                'status': 'failed',
+                'error': str(e)
+            }
 
 def process_pitch_deck(uploaded_file):
     """Process uploaded pitch deck"""
@@ -225,6 +351,10 @@ def display_results():
         # Display additional docs results
         if 'additional_docs' in st.session_state.processing_status:
             display_additional_docs_results()
+        
+        # Display analysis results
+        if 'analysis' in st.session_state.processing_status:
+            display_analysis_results()
 
 def display_pitch_deck_results():
     """Display pitch deck processing results"""
@@ -279,13 +409,58 @@ def display_additional_docs_results():
                 for result in failed:
                     st.write(f"- {result['filename']}")
 
+def display_analysis_results():
+    """Display analysis results"""
+    result = st.session_state.processing_status['analysis']
+    
+    with st.expander("🧠 AI Analysis Results", expanded=True):
+        if result['status'] == 'success':
+            st.success("Multi-agent analysis completed successfully!")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Company:** {result['company_name']}")
+                st.write(f"**Agents Run:** {len(result['agents_run'])}")
+                st.write(f"**Successful:** {len(result['successful_agents'])}")
+                st.write(f"**Failed:** {len(result['failed_agents'])}")
+            
+            with col2:
+                st.write(f"**Analysis Directory:** {result['analysis_dir']}")
+                
+                # Show generated files
+                analysis_dir = Path(result['analysis_dir'])
+                if analysis_dir.exists():
+                    analysis_files = list(analysis_dir.glob("*.md"))
+                    if analysis_files:
+                        st.write("**Generated Files:**")
+                        for file_path in analysis_files:
+                            st.write(f"- ✅ {file_path.name}")
+            
+            # Show agent details
+            if result.get('successful_agents'):
+                st.write("**✅ Successful Agents:**")
+                for agent in result['successful_agents']:
+                    st.write(f"- {agent.title()} Analysis Agent")
+            
+            if result.get('failed_agents'):
+                st.write("**❌ Failed Agents:**")
+                for agent in result['failed_agents']:
+                    st.write(f"- {agent.title()} Analysis Agent")
+            
+            # Provide access information
+            st.write("**📁 Access your analysis files at:**")
+            st.code(result['analysis_dir'])
+                
+        else:
+            st.error(f"Analysis failed: {result.get('error', 'Unknown error')}")
+
 def save_temp_file(uploaded_file) -> str:
     """Save uploaded file to temporary location"""
     with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
         return tmp_file.name
 
-def get_company_name_from_session() -> str:
+def get_company_name_from_session() -> str | None:
     """Get company name from session state"""
     if st.session_state.company_name:
         return st.session_state.company_name
