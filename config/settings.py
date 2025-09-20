@@ -47,6 +47,12 @@ class Settings:
     GROQ_RETRY_ATTEMPTS: int = int(os.getenv("GROQ_RETRY_ATTEMPTS", "3"))
     GROQ_RETRY_DELAY: float = float(os.getenv("GROQ_RETRY_DELAY", "1.0"))
     
+    # Public Data Extraction Configuration
+    PUBLIC_DATA_ENABLED: bool = bool(os.getenv("PUBLIC_DATA_ENABLED", "true").lower() == "true")
+    PUBLIC_DATA_EXTRACTORS: List[str] = os.getenv("PUBLIC_DATA_EXTRACTORS", "products_services").split(",")
+    PUBLIC_DATA_TIMEOUT: int = int(os.getenv("PUBLIC_DATA_TIMEOUT", "60"))
+    PUBLIC_DATA_RETRY_ATTEMPTS: int = int(os.getenv("PUBLIC_DATA_RETRY_ATTEMPTS", "2"))
+    
     def __post_init__(self):
         """Create necessary directories."""
         self.OUTPUT_DIR.mkdir(exist_ok=True)

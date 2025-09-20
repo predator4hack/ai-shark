@@ -87,13 +87,50 @@ class PitchDeckProcessor(BaseProcessor):
             if metadata.get('table_of_contents'):
                 created_files.append(output_paths['toc'])
             
-            return {
+            result = {
                 'status': 'success',
                 'company_name': company_name,
                 'output_dir': company_dir,
                 'files_created': created_files,
                 'metadata': metadata
             }
+            
+            # Trigger public data extraction if successful
+            if result['status'] == 'success' and metadata:
+                try:
+                    from src.public_data.orchestrator import PublicDataOrchestrator
+                    import logging
+                    
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"Starting public data extraction for {company_name}")
+                    
+                    orchestrator = PublicDataOrchestrator()
+                    public_data_result = orchestrator.extract_all(
+                        company_name=company_name,
+                        company_dir=company_dir,
+                        metadata=metadata
+                    )
+                    
+                    result['public_data_extraction'] = public_data_result
+                    logger.info(f"Public data extraction completed for {company_name}")
+                    
+                    # Add public data file to created files list if successful
+                    if (public_data_result.get('status') == 'success' and 
+                        public_data_result.get('output_file')):
+                        result['files_created'].append(public_data_result['output_file'])
+                    
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Public data extraction failed for {company_name}: {e}")
+                    result['public_data_extraction'] = {
+                        'status': 'failed', 
+                        'error': str(e),
+                        'extractors_run': 0,
+                        'total_extractors': 0
+                    }
+            
+            return result
             
         except Exception as e:
             print(f"Error processing pitch deck: {e}")
