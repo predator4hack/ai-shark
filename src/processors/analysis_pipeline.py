@@ -755,11 +755,16 @@ For the complete analysis, please refer to the main report file.
             # Step 2: Generate agent-specific reports
             self.generate_agent_specific_reports(all_results)
 
-            # Step 3: Display summary
-            self._display_multi_agent_pipeline_summary(all_results)
+            # Step 3: Generate questionnaire if analysis successful
+            questionnaire_result = self._run_questionnaire_generation(all_results)
+
+            # Step 4: Display summary
+            self._display_multi_agent_pipeline_summary(all_results, questionnaire_result)
 
             print(f"\n🎉 Multi-Agent Pipeline completed successfully!")
             print(f"📁 Check analysis directory: {self.analysis_dir}")
+            if questionnaire_result and questionnaire_result.success:
+                print(f"📄 Founder questionnaire: {questionnaire_result.markdown_file}")
             
             return all_results
 
@@ -769,7 +774,55 @@ For the complete analysis, please refer to the main report file.
             traceback.print_exc()
             return {}
 
-    def _display_multi_agent_pipeline_summary(self, all_results: Dict[str, Any]) -> None:
+    def _run_questionnaire_generation(self, all_results: Dict[str, Any]):
+        """
+        Generate questionnaire after successful analysis completion
+        
+        Args:
+            all_results: Results from all analysis agents
+            
+        Returns:
+            QuestionnaireResult or None if generation fails/skipped
+        """
+        # Check if we have successful analysis results
+        successful_analyses = {k: v for k, v in all_results.items() if "error" not in v}
+        
+        if not successful_analyses:
+            print("⚠️ No successful analyses - skipping questionnaire generation")
+            return None
+        
+        try:
+            # Import questionnaire processor (lazy import to avoid circular dependencies)
+            from .questionnaire_processor import create_questionnaire_processor
+            
+            print(f"\n📋 Generating Founder Questionnaire")
+            print("=" * 50)
+            print(f"Based on {len(successful_analyses)} successful analysis reports")
+            
+            # Create questionnaire processor
+            questionnaire_processor = create_questionnaire_processor()
+            
+            # Generate questionnaire for this company
+            questionnaire_result = questionnaire_processor.run_post_analysis_questionnaire(
+                str(self.company_dir)
+            )
+            
+            if questionnaire_result.success:
+                print(f"✅ Questionnaire generated successfully!")
+                print(f"📄 File: {questionnaire_result.markdown_file}")
+                print(f"⏱️ Processing time: {questionnaire_result.processing_time:.2f}s")
+            else:
+                print(f"❌ Questionnaire generation failed: {questionnaire_result.error_message}")
+            
+            return questionnaire_result
+            
+        except Exception as e:
+            print(f"❌ Questionnaire generation error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _display_multi_agent_pipeline_summary(self, all_results: Dict[str, Any], questionnaire_result=None) -> None:
         """Display summary of the multi-agent pipeline results"""
 
         successful_analyses = {k: v for k, v in all_results.items() if "error" not in v}
@@ -800,6 +853,13 @@ For the complete analysis, please refer to the main report file.
         for agent_name in successful_analyses.keys():
             print(f"   📄 {agent_name}_analysis.md - {agent_name.title()} analysis report")
         print("   📄 analysis_summary.md - Multi-agent summary")
+        
+        # Add questionnaire information if available
+        if questionnaire_result:
+            if questionnaire_result.success:
+                print(f"   📋 founders-checklist.md - Investment questionnaire for founders")
+            else:
+                print(f"   ⚠️ Questionnaire generation failed: {questionnaire_result.error_message}")
 
 
 def main():
