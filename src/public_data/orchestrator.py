@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .base_extractor import BaseExtractor
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 

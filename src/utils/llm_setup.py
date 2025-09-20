@@ -19,7 +19,7 @@ import google.generativeai as genai
 
 from config.settings import settings
 
-
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 

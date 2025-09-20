@@ -1,0 +1,42 @@
+{
+  "startup_name": "Sia",
+  "sector": "Technology",
+  "sub_sector": "AI for Data Analytics",
+  "website": "https://sianalytics.in",
+  "table_of_contents": {
+    "Problem": [
+      3,
+      4
+    ],
+    "Solution": [
+      5,
+      6
+    ],
+    "Traction": [
+      7,
+      8
+    ],
+    "Market_Size": [
+      9
+    ],
+    "Go-to_Market": [
+      10
+    ],
+    "Business_Model": [
+      11,
+      12
+    ],
+    "Financials": [
+      13
+    ],
+    "Ask": [
+      14
+    ],
+    "Roadmap": [
+      15
+    ],
+    "Team": [
+      2
+    ]
+  }
+}

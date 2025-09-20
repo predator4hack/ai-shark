@@ -101,6 +101,7 @@ class PitchDeckProcessor(BaseProcessor):
                     from src.public_data.orchestrator import PublicDataOrchestrator
                     import logging
                     
+                    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
                     logger = logging.getLogger(__name__)
                     logger.info(f"Starting public data extraction for {company_name}")
                     

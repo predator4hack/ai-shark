@@ -16,7 +16,7 @@ from src.models.document_models import StartupDocument
 from src.models.analysis_models import MarketAnalysis
 from src.utils.prompt_manager import PromptManager
 
-
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 
