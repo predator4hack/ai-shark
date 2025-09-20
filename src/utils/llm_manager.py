@@ -348,7 +348,7 @@ class LLMManager:
             logger.info("Generating founder responses using Gemini...")
             
             # Rate limiting
-            self._rate_limit()
+            self._enforce_rate_limit()
             
             model = genai.GenerativeModel(self.gemini_model)
             response = model.generate_content(prompt)
