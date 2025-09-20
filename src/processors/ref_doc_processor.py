@@ -187,6 +187,12 @@ class RefDocProcessor:
                 
                 # Generate output filename
                 sanitized_name = sanitize_filename(uploaded_file.name)
+                
+                # Check if document is founder checklist related and rename accordingly
+                sanitized_name_lower = sanitized_name.lower()
+                if any(keyword in sanitized_name_lower for keyword in ['founder', 'checklist', "founders_checklist"]):
+                    sanitized_name = 'ref-founders-checklist'
+                
                 output_filename = f"{sanitized_name}.md"
                 output_path = Path(ref_data_dir) / output_filename
                 
