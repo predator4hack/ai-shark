@@ -10,6 +10,7 @@ import requests
 from typing import Optional
 from urllib.parse import urlparse, urljoin
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 

@@ -4,7 +4,7 @@ Products and Services Extractor
 This module extracts information about a company's products and services
 using Gemini with URL context tools to analyze the company website.
 """
-
+import os
 import logging
 from typing import Dict, Any
 
@@ -13,6 +13,7 @@ from google.ai import generativelanguage as glm
 
 from ..base_extractor import BaseExtractor
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +27,7 @@ class ProductsServicesExtractor(BaseExtractor):
     
     def __init__(self):
         """Initialize the extractor with Gemini model configuration"""
-        self.model_name = "gemini-2.5-flash"
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
         
         # Verify Gemini is configured
         try:
@@ -74,7 +75,7 @@ class ProductsServicesExtractor(BaseExtractor):
             
             # Create the analysis prompt
             prompt = self._create_analysis_prompt(company_name, website)
-            
+
             # Option 1: Try using GoogleSearchRetrieval tool first
             try:
                 tools = [
