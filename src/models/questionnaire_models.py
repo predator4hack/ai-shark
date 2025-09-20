@@ -145,7 +145,7 @@ class AnalysisReportCollection:
         )
     
     def get_formatted_content(self) -> str:
-        """Get formatted content for LLM processing"""
+        """Get formatted content for LLM processing (legacy method - kept for compatibility)"""
         sections = []
         
         # Header
@@ -167,6 +167,26 @@ class AnalysisReportCollection:
             sections.append("-" * 60)
             sections.append(report.content)
             sections.append("\n" + "=" * 80)
+        
+        return "\n".join(sections)
+    
+    def get_concatenated_reports(self) -> str:
+        """
+        Get concatenated reports formatted for questionnaire prompt
+        
+        Returns:
+            Concatenated string with H1 headers and equals separators
+        """
+        sections = []
+        
+        # Process reports in the order they were loaded
+        for report_type, report in self.valid_reports.items():
+            # Convert report type to H1 header format
+            display_name = report_type.replace('_', ' ').upper()
+            
+            sections.append(f"# {display_name} REPORT")
+            sections.append(report.content)
+            sections.append("=" * 80)
         
         return "\n".join(sections)
 

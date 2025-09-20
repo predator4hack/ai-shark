@@ -5,7 +5,6 @@ This agent processes all analysis reports from various agents and generates
 comprehensive questionnaire documents for founders to clarify investment gaps.
 """
 
-import os
 import time
 import random
 from datetime import datetime
@@ -100,35 +99,20 @@ class QuestionnaireAgent:
         start_time = datetime.now()
         
         try:
-            # Prepare prompt parameters based on available reports
+            # Get concatenated reports for the prompt
+            concatenated_reports = report_collection.get_concatenated_reports()
+            
+            # Prepare simplified prompt parameters
             prompt_params = {
                 "company_name": report_collection.company_name,
                 "total_reports": len(report_collection.valid_reports),
-                "report_types": ', '.join(report_collection.report_types)
+                "report_types": ', '.join(report_collection.report_types),
+                "analysis_reports": concatenated_reports
             }
-            
-            # Add individual report contents based on what's available
-            for report_type, report in report_collection.valid_reports.items():
-                if "business" in report_type.lower():
-                    prompt_params["business_analysis"] = report.content
-                elif "market" in report_type.lower():
-                    prompt_params["market_analysis"] = report.content
-                else:
-                    # For other report types, use generic parameter names
-                    param_name = report_type.replace("_", " ").replace("-", " ").strip()
-                    prompt_params[f"{report_type}_analysis"] = report.content
             
             # Debug output
             print(f"🔍 Available reports: {list(report_collection.valid_reports.keys())}")
-            print(f"🔍 Prompt parameters being passed: {list(prompt_params.keys())}")
-            
-            # Ensure we have parameters for the template (even if empty)
-            expected_params = ["business_analysis", "market_analysis", "financial_analysis", 
-                             "competitive_analysis", "technology_analysis"]
-            
-            for param in expected_params:
-                if param not in prompt_params:
-                    prompt_params[param] = ""  # Empty string for missing reports
+            print(f"🔍 Concatenated reports size: {len(concatenated_reports):,} characters")
             
             prompt = self.prompt_manager.format_prompt(
                 config.prompt_key,

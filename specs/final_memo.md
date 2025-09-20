@@ -4,4 +4,4 @@
 
 ## Implementation Plan
 
-1. Analyse the streamlit_app.py and understand the workflow. Once the ans-founders-checklist.md is created either by simulating founders answers or by user directly uploading the
+1. Analyse the streamlit_app.py and understand the workflow. Once the ans-founders-checklist.md is created either by simulating founders answers or by user directly uploading the Q&A document,
