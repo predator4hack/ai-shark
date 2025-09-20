@@ -75,31 +75,28 @@ class ProductsServicesExtractor(BaseExtractor):
             # Create the analysis prompt
             prompt = self._create_analysis_prompt(company_name, website)
             
-            # Use Gemini with URL context as specified in requirements
-            contents = [
-                glm.Content(
-                    role="user",
-                    parts=[
-                        glm.Part(text=prompt),
-                    ],
-                ),
-            ]
-            
-            tools = [
-                glm.Tool(url_context=glm.UrlContext()),
-            ]
-            
-            generate_content_config = glm.GenerateContentConfig(
-                thinking_config=glm.ThinkingConfig(thinking_budget=-1),
-                tools=tools,
-            )
-            
-            # Generate the analysis
-            model = genai.GenerativeModel(self.model_name)
-            response = model.generate_content(
-                contents=contents,
-                config=generate_content_config
-            )
+            # Option 1: Try using GoogleSearchRetrieval tool first
+            try:
+                tools = [
+                    glm.Tool(google_search_retrieval=glm.GoogleSearchRetrieval())
+                ]
+                
+                model = genai.GenerativeModel(self.model_name)
+                response = model.generate_content(
+                    prompt,
+                    tools=tools
+                )
+                
+                logger.info(f"Successfully analyzed {website} using GoogleSearchRetrieval")
+                
+            except Exception as tool_error:
+                logger.warning(f"GoogleSearchRetrieval failed, trying direct approach: {tool_error}")
+                
+                # Option 2: Fallback to direct URL analysis without special tools
+                model = genai.GenerativeModel(self.model_name)
+                response = model.generate_content(prompt)
+                
+                logger.info(f"Successfully analyzed {website} using direct approach")
             
             # Extract the response text
             if response and response.text:
@@ -142,30 +139,33 @@ class ProductsServicesExtractor(BaseExtractor):
             Formatted prompt string
         """
         return f"""
-Analyze the website for {company_name} ({website}) and provide a comprehensive analysis of their products and services.
+Please visit and analyze the website {website} for the company {company_name}. I need you to thoroughly examine their website content and provide a comprehensive analysis of their products and services.
 
-Please extract and organize the following information in clear markdown format:
+Website to analyze: {website}
+Company name: {company_name}
+
+Please extract and organize the following information from their website in clear markdown format:
 
 ### Core Products/Services
 - What are the main products or services offered by {company_name}?
-- Describe each product/service in detail
+- Describe each product/service in detail based on what you find on their website
 
 ### Key Features & Capabilities
 - What are the most important features or capabilities of their offerings?
-- What technical capabilities do they highlight?
+- What technical capabilities do they highlight on their site?
 
 ### Target Market & Customers
-- Who is the primary target audience?
+- Who is the primary target audience mentioned on their website?
 - What market segments do they serve?
 - What types of customers do they focus on?
 
 ### Value Proposition
-- What makes their offering unique or valuable?
+- What makes their offering unique or valuable according to their website?
 - What problems do they solve for customers?
 - What benefits do they emphasize?
 
 ### Pricing Information
-- Any pricing details, plans, or pricing models mentioned
+- Any pricing details, plans, or pricing models mentioned on the site
 - Is it subscription-based, one-time purchase, freemium, etc.?
 
 ### Technology & Platform
@@ -173,16 +173,17 @@ Please extract and organize the following information in clear markdown format:
 - Any integrations or technical specifications highlighted?
 
 ### Business Model
-- How do they appear to generate revenue?
+- How do they appear to generate revenue based on their website?
 - What is their go-to-market approach?
 
-**Instructions:**
+**Important Instructions:**
+- Please actually visit and examine the website content at {website}
 - Be specific and factual, only including information that can be found on their website
 - Use clear, professional language suitable for business analysis
 - Structure your response with proper markdown headers and bullet points
 - If certain information is not available on the website, mention that explicitly
 - Focus on concrete details rather than marketing language
-- Aim for comprehensive coverage while being concise and organized
+- If you cannot access the website, please indicate that clearly
 
-Please analyze the website thoroughly and provide detailed insights about {company_name}'s products and services.
+Please provide a detailed analysis based on your examination of {company_name}'s website at {website}.
 """
