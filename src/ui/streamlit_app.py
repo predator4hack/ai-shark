@@ -893,15 +893,24 @@ def save_temp_file(uploaded_file) -> str:
         return tmp_file.name
 
 def get_company_name_from_session() -> str | None:
-    """Get company name from session state"""
-    if st.session_state.company_name:
-        return st.session_state.company_name
+    """Get company name from session state (sanitized for directory operations)"""
+    from src.utils.output_manager import OutputManager
     
-    # Try to get from pitch deck results
-    if 'pitch_deck' in st.session_state.processing_status:
+    company_name = None
+    
+    # First try to get from session state
+    if st.session_state.company_name:
+        company_name = st.session_state.company_name
+    
+    # Try to get from pitch deck results if not in session state
+    if not company_name and 'pitch_deck' in st.session_state.processing_status:
         result = st.session_state.processing_status['pitch_deck']
         if result.get('status') == 'success' and result.get('company_name'):
-            return result['company_name']
+            company_name = result['company_name']
+    
+    # Ensure we always return sanitized name for directory consistency
+    if company_name:
+        return OutputManager.sanitize_company_name(company_name)
     
     return None
 

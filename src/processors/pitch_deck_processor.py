@@ -54,10 +54,14 @@ class PitchDeckProcessor(BaseProcessor):
                 raise ValueError("Could not extract metadata from the document")
             print(metadata)
             # Extract company name and create output directory
-            company_name = metadata.get('startup_name')
-            if not company_name:
+            raw_company_name = metadata.get('startup_name')
+            if not raw_company_name:
                 company_name = OutputManager.generate_fallback_name()
                 print(f"No company name found, using fallback: {company_name}")
+            else:
+                # Use sanitized name for consistency with directory operations
+                company_name = OutputManager.sanitize_company_name(raw_company_name)
+                print(f"Company name sanitized from '{raw_company_name}' to '{company_name}'")
             
             company_dir = OutputManager.create_company_dir(company_name, output_dir)
             
