@@ -1,18 +1,18 @@
 {
   "startup_name": "naario",
   "sector": "Consumer Goods",
-  "sub_sector": "Millet-based Food & Beverage",
+  "sub_sector": "Functional Food CPG",
   "website": "https://naario.com",
   "table_of_contents": {
-    "Problem_Opportunity": [
-      2,
+    "Problem": [
       3,
       4,
-      5,
-      8
+      5
     ],
-    "Solution_Product": [
+    "Solution": [
+      2,
       7,
+      8,
       10,
       11
     ],
@@ -22,40 +22,40 @@
     "Business_Model": [
       9
     ],
-    "Competition_Competitive_Analysis": [
+    "Competition": [
       12,
       25
     ],
-    "Go-to_Market_Strategy": [
-      13,
-      23
+    "Team": [
+      19
     ],
-    "Traction_Metrics": [
+    "Traction": [
       14,
-      15
+      15,
+      16
     ],
-    "Financials_Revenue": [
+    "Financials": [
+      14,
       17,
       22,
+      23,
       24
     ],
-    "Funding_Ask_Investment": [
-      16,
+    "Go_to_Market_Strategy": [
+      13
+    ],
+    "Funding_Ask": [
       18,
       26
     ],
-    "Roadmap_Future_Plans": [
-      16,
-      24
-    ],
-    "Team_Founders": [
-      19
+    "Roadmap": [
+      16
     ]
   },
   "questionnaire": {
     "generated": true,
-    "generated_at": "2025-09-21T03:22:11.723897",
-    "processing_time": 25.644888,
+    "generated_at": "2025-09-21T11:46:21.542699",
+    "processing_time": 16.914998,
     "markdown_file": "outputs/naario/founders-checklist.md",
     "agent": "QuestionnaireAgent",
     "source_reports": [
@@ -64,7 +64,7 @@
     ],
     "total_reports": 2
   },
-  "last_updated": "2025-09-21T03:22:11.725549",
+  "last_updated": "2025-09-21T11:46:21.544693",
   "processing_status": {
     "questionnaire_complete": true
   }
