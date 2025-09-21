@@ -1,14 +1,14 @@
-version: '3.8'
-
 services:
-  ai-shark:
+  ai-shark-app:
+    container_name: ai-shark-streamlit
     build:
       context: .
       dockerfile: Dockerfile
+    image: ai-shark-app:latest # Explicitly name the image
     ports:
-      - "8080:8080" # Map host port 8080 to container port 8080
+      - "8080:8080"
     env_file:
-      - .env # Load environment variables from .env file for local development
+      - .env
     volumes:
-      - ./outputs:/app/outputs # Persist outputs directory
-    restart: unless-stopped # Always restart unless explicitly stopped
+      - ./outputs:/app/outputs
+    restart: unless-stopped
