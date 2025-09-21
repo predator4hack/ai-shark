@@ -1,6 +1,6 @@
 # Multi-Agent Analysis Summary
 
-**Generated:** 2025-09-21 11:46:04
+**Generated:** 2025-09-21 09:29:02
 **Analysis System:** AI-Shark Multi-Agent Pipeline
 **Company Directory:** outputs/naario
 
@@ -9,7 +9,7 @@
 - **Total Agents Executed:** 2
 - **Successful Analyses:** 2
 - **Failed Analyses:** 0
-- **Total Processing Time:** 87.74 seconds
+- **Total Processing Time:** 29.67 seconds
 
 ## Agent Results
 
@@ -17,14 +17,14 @@
 
 #### Business Analysis
 - **Agent:** BusinessAnalysisAgent
-- **Processing Time:** 51.20 seconds
-- **Report Length:** 27,393 characters
+- **Processing Time:** 16.11 seconds
+- **Report Length:** 11,484 characters
 - **Output File:** `business_analysis.md`
 
 #### Market Analysis
 - **Agent:** MarketAnalysisAgent
-- **Processing Time:** 36.54 seconds
-- **Report Length:** 22,964 characters
+- **Processing Time:** 13.56 seconds
+- **Report Length:** 10,316 characters
 - **Output File:** `market_analysis.md`
 
 

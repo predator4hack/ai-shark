@@ -1,49 +1,43 @@
 {
   "Problem": [
+    2,
     3,
     4,
     5
   ],
   "Solution": [
-    2,
+    6,
     7,
     8,
-    10,
-    11
+    9,
+    10
   ],
   "Market_Size": [
     6
   ],
-  "Business_Model": [
-    9
-  ],
   "Competition": [
-    12,
-    25
+    11,
+    23
   ],
-  "Team": [
-    19
+  "Go-to-Market": [
+    12
   ],
   "Traction": [
-    14,
-    15,
+    13
+  ],
+  "Team": [
     16
   ],
   "Financials": [
     14,
-    17,
-    22,
-    23,
-    24
-  ],
-  "Go_to_Market_Strategy": [
-    13
-  ],
-  "Funding_Ask": [
+    15,
     18,
-    26
+    19
+  ],
+  "Ask": [
+    17
   ],
   "Roadmap": [
-    16
+    20
   ]
 }

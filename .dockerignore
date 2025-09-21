@@ -1,6 +1,94 @@
-.venv/
-__pycache__/
-.vscode/
-.kiro/
+# Project-specific exclusions
+# Keep only: src/, config/, streamlit_ui.py, task_config.py, pyproject.toml, .env
+
+# Exclude all directories except essential ones
+assets/
 outputs/
+specs/
+tests/
+_pycache_/
+
+# Exclude non-essential files
+news_scrapper.py
+requirements.txt
+README.md
+*.md
+tasks-multi-agent.md
+uv.lock
+
+# Version control
+.git
+.gitignore
+
+# Python cache
+_pycache_/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
 logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+docs/
+*.md
+README*
+
+# Development files
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Outputs directory (will be created in container)
+outputs/
+
+# Temporary files
+tmp/
+temp/

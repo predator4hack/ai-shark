@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ai-shark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Map host port 8080 to container port 8080
+    env_file:
+      - .env # Load environment variables from .env file for local development
+    volumes:
+      - ./outputs:/app/outputs # Persist outputs directory
+    restart: unless-stopped # Always restart unless explicitly stopped
