@@ -1,8 +1,8 @@
 {
   "startup_name": "Syntra",
   "sector": "Technology",
-  "sub_sector": "Ed-Tech/AI",
-  "website": "https://linkedin.com/company/inlustro/",
+  "sub_sector": "Ed-Tech",
+  "website": "https://www.linkedin.com/company/inlustro/",
   "table_of_contents": {
     "Problem": [
       3
@@ -16,14 +16,20 @@
     "Traction": [
       12
     ],
+    "Business_Model": [
+      10
+    ],
+    "Go_to_Market": [
+      11
+    ],
     "Financials": [
       13
     ],
-    "Ask": [
+    "Funding_Ask": [
       14
     ],
-    "Go-to-Market": [
-      11
+    "Competition": [
+      9
     ]
   }
 }

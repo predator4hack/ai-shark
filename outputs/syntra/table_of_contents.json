@@ -11,13 +11,19 @@
   "Traction": [
     12
   ],
+  "Business_Model": [
+    10
+  ],
+  "Go_to_Market": [
+    11
+  ],
   "Financials": [
     13
   ],
-  "Ask": [
+  "Funding_Ask": [
     14
   ],
-  "Go-to-Market": [
-    11
+  "Competition": [
+    9
   ]
 }
