@@ -33,4 +33,11 @@ Agent 2:
  Default Company Page for Individual Developer
 
  Extraction
- 
+
+
+
+
+
+Spin up the container:
+
+gcloud run deploy ai-shark-app     --image us-central1-docker.pkg.dev/hack2skill-472805/genai/ai-shark:v1     --platform managed     --region us-central1     --allow-unauthenticated     --env-vars-file=env.yaml
