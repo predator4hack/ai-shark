@@ -1,0 +1,49 @@
+{
+  "startup_name": "SENSEMEI",
+  "sector": "Technology",
+  "sub_sector": "AIoT Semiconductor",
+  "website": "https://www.sensesemi.com",
+  "table_of_contents": {
+    "Executive_Summary": [
+      2
+    ],
+    "Problem": [
+      3
+    ],
+    "Solution": [
+      4,
+      5,
+      8,
+      19,
+      20
+    ],
+    "Traction": [
+      6,
+      14,
+      21
+    ],
+    "Roadmap": [
+      7,
+      17
+    ],
+    "Market_Size": [
+      9,
+      10,
+      11
+    ],
+    "Team": [
+      12
+    ],
+    "Competition": [
+      13
+    ],
+    "Financials": [
+      15
+    ],
+    "Ask": [
+      2,
+      16,
+      21
+    ]
+  }
+}

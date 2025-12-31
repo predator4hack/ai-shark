@@ -1,0 +1,60 @@
+{
+  "startup_name": "Peopleprosper Technologies Private Limited",
+  "sector": "Technology",
+  "sub_sector": "HR_Tech / SaaS",
+  "website": null,
+  "table_of_contents": {
+    "Solution": [
+      16
+    ],
+    "Team": [
+      13,
+      24,
+      34
+    ],
+    "Financials": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ],
+    "Traction": [
+      36
+    ]
+  },
+  "questionnaire": {
+    "generated": true,
+    "generated_at": "2025-12-31T00:59:46.832205",
+    "processing_time": 14.813858,
+    "markdown_file": "outputs/peopleprosper_technologies_private_limited/founders-checklist.md",
+    "agent": "QuestionnaireAgent",
+    "source_reports": [
+      "business_analysis",
+      "market_analysis"
+    ],
+    "total_reports": 2
+  },
+  "last_updated": "2025-12-31T00:59:46.836102",
+  "processing_status": {
+    "questionnaire_complete": true
+  }
+}

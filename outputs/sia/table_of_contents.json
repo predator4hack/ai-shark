@@ -4,8 +4,12 @@
     4
   ],
   "Solution": [
+    1,
     5,
     6
+  ],
+  "Team": [
+    2
   ],
   "Traction": [
     7,
@@ -14,7 +18,7 @@
   "Market_Size": [
     9
   ],
-  "Go-to_Market": [
+  "Go_to_Market": [
     10
   ],
   "Business_Model": [
@@ -29,8 +33,5 @@
   ],
   "Roadmap": [
     15
-  ],
-  "Team": [
-    2
   ]
 }

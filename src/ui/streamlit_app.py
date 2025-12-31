@@ -118,9 +118,11 @@ def analysis_section():
     if not company_name:
         st.info("ℹ️ Please process a pitch deck first before running analysis.")
         return
-    
-    # Check if company directory exists
-    company_dir = Path("outputs") / company_name
+    print(f"Company name from session: {company_name}")
+
+    # Check if company directory exists (using sanitized name)
+    sanitized_name = OutputManager.sanitize_company_name(company_name)
+    company_dir = Path("outputs") / sanitized_name
     if not company_dir.exists():
         st.warning("⚠️ Company directory not found. Please process documents first.")
         return
@@ -361,9 +363,10 @@ def founder_simulation_section():
     company_name = get_company_name_from_session()
     if not company_name:
         return
-    
-    # Check if founders-checklist.md exists
-    company_dir = Path("outputs") / company_name
+
+    # Check if founders-checklist.md exists (using sanitized name)
+    sanitized_name = OutputManager.sanitize_company_name(company_name)
+    company_dir = Path("outputs") / sanitized_name
     checklist_file = company_dir / "founders-checklist.md"
     
     if not checklist_file.exists():
@@ -914,9 +917,11 @@ def final_memo_section():
     company_name = get_company_name_from_session()
     if not company_name:
         return
-    
-    company_dir = Path("outputs") / company_name
-    
+
+    # Use sanitized company name for directory path
+    sanitized_name = OutputManager.sanitize_company_name(company_name)
+    company_dir = Path("outputs") / sanitized_name
+
     st.header("📈 Final Investment Memo")
     st.markdown("Generate a comprehensive investment memo based on weighted analysis from multiple agents.")
     
