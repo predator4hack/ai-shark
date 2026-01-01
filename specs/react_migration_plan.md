@@ -967,6 +967,7 @@ def get_settings() -> Settings:
 return Settings()
 
 settings = get_settings()
+
 Milestone 2: React Frontend Setup (Week 1-2)
 Task 2.1: Initialize React Project
 Commands:
