@@ -1,0 +1,47 @@
+# Development Dockerfile for FastAPI Backend
+FROM python:3.11-slim
+
+# Install system dependencies for development
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    git \
+    libfontconfig1 \
+    libxrender1 \
+    libxext6 \
+    libx11-6 \
+    libglib2.0-0 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
+    fonts-liberation \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Set working directory
+WORKDIR /app
+
+# Install UV package manager for faster dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Install dependencies with UV
+RUN uv lock && uv sync
+
+# Make sure the virtual environment is in PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Create outputs directory
+RUN mkdir -p /app/outputs
+
+# Expose FastAPI port
+EXPOSE 8000
+
+# Development command (will be overridden in docker-compose.dev.yml)
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

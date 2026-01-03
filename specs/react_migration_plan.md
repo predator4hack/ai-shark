@@ -1542,6 +1542,7 @@ return (
 }
 
 export default App
+
 Milestone 3: Integration & Testing (Week 2)
 Task 3.1: Docker Compose for Development
 File: docker-compose.dev.yml
