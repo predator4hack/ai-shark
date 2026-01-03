@@ -1,14 +1,13 @@
-import React, { useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Typography, Paper } from '@mui/material'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import { FILE_UPLOAD } from '../../utils/constants'
+import React, { useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Icon } from '@iconify/react';
+import { FILE_UPLOAD } from '../../utils/constants';
 
 interface DragDropZoneProps {
-  onFileSelect: (file: File) => void
-  acceptedFileTypes?: string[]
-  maxSizeMB?: number
-  disabled?: boolean
+  onFileSelect: (file: File) => void;
+  acceptedFileTypes?: string[];
+  maxSizeMB?: number;
+  disabled?: boolean;
 }
 
 export const DragDropZone: React.FC<DragDropZoneProps> = ({
@@ -17,11 +16,14 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({
   maxSizeMB = FILE_UPLOAD.MAX_SIZE_MB,
   disabled = false,
 }) => {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      onFileSelect(acceptedFiles[0])
-    }
-  }, [onFileSelect])
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        onFileSelect(acceptedFiles[0]);
+      }
+    },
+    [onFileSelect]
+  );
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
@@ -29,47 +31,45 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({
     maxSize: maxSizeMB * 1024 * 1024,
     multiple: false,
     disabled,
-  })
+  });
 
   return (
-    <Paper
+    <div
       {...getRootProps()}
-      elevation={3}
-      sx={{
-        p: 4,
-        textAlign: 'center',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        border: '2px dashed',
-        borderColor: isDragActive ? 'primary.main' : 'grey.300',
-        bgcolor: isDragActive ? 'action.hover' : 'background.paper',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          borderColor: disabled ? 'grey.300' : 'primary.main',
-          bgcolor: disabled ? 'background.paper' : 'action.hover',
-        },
-      }}
+      className={`
+        p-12 text-center rounded-xl border-2 border-dashed transition-all duration-200
+        ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+        ${
+          isDragActive
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-slate-300 bg-white hover:border-blue-500 hover:bg-blue-50'
+        }
+        ${disabled ? 'hover:border-slate-300 hover:bg-white' : ''}
+      `}
     >
       <input {...getInputProps()} />
 
-      <CloudUploadIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+      <Icon
+        icon="lucide:cloud-upload"
+        className={`mx-auto mb-4 ${isDragActive ? 'text-blue-600' : 'text-blue-500'}`}
+        width="64"
+      />
 
-      <Typography variant="h6" gutterBottom>
+      <h3 className="text-xl font-semibold text-slate-900 mb-2">
         {isDragActive ? 'Drop the file here' : 'Drag & drop your pitch deck'}
-      </Typography>
+      </h3>
 
-      <Typography variant="body2" color="text.secondary">
-        or click to browse
-      </Typography>
+      <p className="text-sm text-slate-500 mb-4">or click to browse</p>
 
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+      <p className="text-xs text-slate-400">
         Supported formats: {acceptedFileTypes.join(', ')} (Max {maxSizeMB}MB)
-      </Typography>
+      </p>
 
       {fileRejections.length > 0 && (
-        <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+        <div className="mt-4 text-red-600 text-sm font-medium">
           {fileRejections[0].errors[0].message}
-        </Typography>
+        </div>
       )}
-    </Paper>
-  )
-}
+    </div>
+  );
+};

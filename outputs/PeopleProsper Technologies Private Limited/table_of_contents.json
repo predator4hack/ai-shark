@@ -1,55 +1,41 @@
 {
-  "Solution_Product": [
+  "Problem": null,
+  "Solution": [
     16
   ],
-  "Team": [
-    23,
-    24,
-    32
+  "Market_Size": null,
+  "Business_Model": [
+    27
   ],
-  "Traction": [
-    12,
+  "Competition": null,
+  "Team": [
     13,
     14,
-    29,
-    33,
-    36,
-    38
-  ],
-  "Financials": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
     15,
-    17,
-    18,
-    19,
-    20,
-    21,
-    26,
-    27,
-    28,
-    30,
+    35
+  ],
+  "Traction": [
+    14,
+    41
+  ],
+  "Financials_Balance_Sheet": [
+    13
+  ],
+  "Financials_Profit_Loss": [
+    14
+  ],
+  "Financials_Cash_Flow": [
+    15
+  ],
+  "Go_to_Market": null,
+  "Funding": [
+    13,
+    23,
+    24,
+    33,
     34,
-    35,
-    37,
     38,
     39
   ],
-  "Funding_Ask": [
-    22,
-    23,
-    24,
-    25,
-    31,
-    32
-  ]
+  "Roadmap": null
 }
