@@ -10,9 +10,10 @@ from src.utils.llm_manager import llm_manager
 
 class PitchDeckProcessor(BaseProcessor):
     """Processes pitch deck files (PDF and PPT)"""
-    
+
     def __init__(self):
         self.supported_extensions = ['.pdf', '.ppt', '.pptx']
+        self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
     
     def get_supported_extensions(self) -> List[str]:
         """Return list of supported file extensions"""
@@ -34,17 +35,28 @@ class PitchDeckProcessor(BaseProcessor):
             file_extension = Path(file_path).suffix.lower()
             
             # Convert to images based on file type
-            if file_extension == '.pdf':
-                images = self._process_pdf(file_path)
-            elif file_extension in ['.ppt', '.pptx']:
-                images = self._process_ppt(file_path)
+            if self.use_mock:
+                print("Mock mode: Skipping file conversion")
+                images = []  # Empty list for mock mode
             else:
-                raise ValueError(f"Unsupported file type: {file_extension}")
-            
-            if not images:
+                if file_extension == '.pdf':
+                    images = self._process_pdf(file_path)
+                elif file_extension in ['.ppt', '.pptx']:
+                    images = self._process_ppt(file_path)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_extension}")
+
+                if not images:
+                    raise ValueError("Could not extract images from the file")
+
+                print(f"Successfully extracted {len(images)} pages/slides")
+
+            # In mock mode, we don't need images, metadata extraction will use mock data
+            if not self.use_mock and not images:
                 raise ValueError("Could not extract images from the file")
-            
-            print(f"Successfully extracted {len(images)} pages/slides")
+
+            if images or self.use_mock:
+                print(f"Successfully processed document ({'mock mode' if self.use_mock else f'{len(images)} pages'})")
             
             # Stage 1: Extract metadata including startup info and table of contents
             print("Stage 1: Extracting startup metadata and table of contents...")
@@ -145,6 +157,10 @@ class PitchDeckProcessor(BaseProcessor):
     
     def _process_pdf(self, pdf_path: str) -> List[Image.Image]:
         """Process PDF pitch deck using LLM manager"""
+        # In mock mode, this will return empty list
+        if self.use_mock:
+            print("Mock mode: Skipping PDF processing")
+            return []
         return llm_manager.pdf_to_images(pdf_path)
     
     def _process_ppt(self, ppt_path: str) -> List[Image.Image]:

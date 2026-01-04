@@ -1,17 +1,25 @@
 {
-  "startup_name": "Peopleprosper Technologies Private Limited",
+  "startup_name": "PeopleProsper Technologies Private Limited",
   "sector": "Technology",
-  "sub_sector": "HR Tech / Payroll Software",
+  "sub_sector": "HR Tech",
   "website": null,
   "table_of_contents": {
+    "Problem": null,
     "Solution": [
       16
     ],
+    "Market_Size": null,
+    "Business_Model": [
+      16
+    ],
+    "Competition": null,
     "Team": [
-      32
+      21
     ],
     "Traction": [
-      16
+      14,
+      15,
+      30
     ],
     "Financials": [
       1,
@@ -27,8 +35,6 @@
       11,
       12,
       13,
-      14,
-      15,
       16,
       17,
       18,
@@ -43,16 +49,10 @@
       27,
       28,
       29,
-      30,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38,
-      39
-    ]
+      31
+    ],
+    "Go-to_Market": null,
+    "Funding": null,
+    "Roadmap": null
   }
 }

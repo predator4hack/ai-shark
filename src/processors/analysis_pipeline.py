@@ -51,9 +51,12 @@ class AnalysisPipeline:
 
         Args:
             company_dir: Path to the company's output directory (e.g., "outputs/company-name")
-            use_real_llm: Whether to use real LLM API (defaults to True for production)
+            use_real_llm: Whether to use real LLM API (can be overridden by USE_MOCK_LLM env var)
         """
-        self.use_real_llm = use_real_llm
+        # Environment variable takes precedence
+        mock_from_env = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        self.use_real_llm = use_real_llm and not mock_from_env
+
         self.company_dir = Path(company_dir)
         self.analysis_dir = self.company_dir / "analysis"
         self.analysis_dir.mkdir(exist_ok=True)

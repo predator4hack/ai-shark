@@ -45,8 +45,15 @@ class LLMManager:
         self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         self.gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
         self.prompt_manager = PromptManager()
-        self._configure_gemini()
-        
+
+        # Mock mode detection
+        self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+
+        if not self.use_mock:
+            self._configure_gemini()
+        else:
+            logger.info("Mock LLM mode enabled - skipping API configuration")
+
         # For LangChain compatibility
         self.llm_instance: Optional[BaseLanguageModel] = None
         self.last_request_time = 0
@@ -85,6 +92,11 @@ class LLMManager:
     
     def pdf_to_images(self, pdf_path: str) -> List[Image.Image]:
         """Convert each page of a PDF into a list of PIL Images"""
+        # Mock mode: skip PDF conversion
+        if self.use_mock:
+            logger.info("Mock mode: Skipping PDF to images conversion")
+            return []
+
         try:
             doc = fitz.open(pdf_path)
             images = []
@@ -104,16 +116,22 @@ class LLMManager:
     @retry_with_backoff()
     def extract_metadata(self, page_images: List[Image.Image]) -> Optional[Dict[str, Any]]:
         """Extract startup metadata including name, sector, sub-sector, website, and table of contents"""
+        # Mock mode: return fixed metadata without processing images
+        if self.use_mock:
+            from src.utils.mock_responses import MOCK_METADATA
+            logger.info("Mock mode: Returning mock metadata")
+            return MOCK_METADATA
+
         try:
             logger.info("Extracting metadata from pitch deck...")
             model = genai.GenerativeModel(self.gemini_model)
-            
+
             # Get the metadata extraction prompt
             prompt = self.prompt_manager.format_prompt("metadata_extraction")
-            
+
             # Prepare content list [prompt, image1, image2, ...]
             content = [prompt] + page_images
-            
+
             response = model.generate_content(content)
             print(f"Response: {response}")
             # Clean up the response to extract only the JSON part
@@ -127,13 +145,13 @@ class LLMManager:
                 parts = cleaned_response.split("```")
                 if len(parts) >= 3:
                     cleaned_response = parts[1].strip()
-            
+
             metadata = json.loads(cleaned_response)
             logger.info("Successfully extracted metadata")
             logger.debug(f"Metadata: {json.dumps(metadata, indent=2)}")
-            
+
             return metadata
-            
+
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Error extracting metadata: {e}")
             if 'response' in locals():
@@ -143,20 +161,26 @@ class LLMManager:
     @retry_with_backoff()
     def extract_topic_data(self, topic: str, page_images: List[Image.Image]) -> str:
         """Extract detailed information for a specific topic from its relevant pages"""
+        # Mock mode: return fixed content without processing
+        if self.use_mock:
+            from src.utils.mock_responses import MOCK_TOPIC_CONTENT
+            logger.info(f"Mock mode: Returning mock content for topic '{topic}'")
+            return MOCK_TOPIC_CONTENT.get(topic, f"# {topic}\n\nMock content for {topic}")
+
         try:
             model = genai.GenerativeModel(self.gemini_model)
-            
+
             # Get the topic analysis prompt
             prompt = self.prompt_manager.format_prompt(
                 "topic_analysis",
                 topic=topic,
                 version="v2"
             )
-            
+
             content = [prompt] + page_images
             response = model.generate_content(content)
             return response.text
-            
+
         except Exception as e:
             logger.error(f"Error extracting topic data for '{topic}': {e}")
             return f"Error extracting data for topic '{topic}': {e}"
