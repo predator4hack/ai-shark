@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 import os
 from pathlib import Path
 
-from .routers import documents, jobs, files
+from .routers import documents, jobs, files, analysis
 
 # Create FastAPI app
 app = FastAPI(
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(documents.router)
 app.include_router(jobs.router)
 app.include_router(files.router)
+app.include_router(analysis.router)
 
 
 # Health check
@@ -49,7 +50,9 @@ async def api_root():
             "docs": "/docs",
             "pitch_deck_upload": "/api/v1/documents/pitch-deck",
             "job_status": "/api/v1/jobs/{job_id}/status",
-            "file_download": "/api/v1/files/download/{company_name}/{file_path}"
+            "file_download": "/api/v1/files/download/{company_name}/{file_path}",
+            "discover_agents": "/api/v1/analysis/discover-agents",
+            "run_analysis": "/api/v1/analysis/run-agents"
         }
     }
 

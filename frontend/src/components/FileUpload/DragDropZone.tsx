@@ -1,75 +1,111 @@
-import React, { useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Icon } from '@iconify/react';
-import { FILE_UPLOAD } from '../../utils/constants';
+import React, { useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { Icon } from "@iconify/react";
+import { FILE_UPLOAD } from "../../utils/constants";
 
 interface DragDropZoneProps {
-  onFileSelect: (file: File) => void;
-  acceptedFileTypes?: string[];
-  maxSizeMB?: number;
-  disabled?: boolean;
+    onFileSelect: (file: File) => void;
+    acceptedFileTypes?: string[];
+    maxSizeMB?: number;
+    disabled?: boolean;
+    size?: "sm" | "md" | "lg";
 }
 
 export const DragDropZone: React.FC<DragDropZoneProps> = ({
-  onFileSelect,
-  acceptedFileTypes = FILE_UPLOAD.ACCEPTED_TYPES,
-  maxSizeMB = FILE_UPLOAD.MAX_SIZE_MB,
-  disabled = false,
+    onFileSelect,
+    acceptedFileTypes = FILE_UPLOAD.ACCEPTED_TYPES,
+    maxSizeMB = FILE_UPLOAD.MAX_SIZE_MB,
+    disabled = false,
+    size = "sm",
 }) => {
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (acceptedFiles.length > 0) {
-        onFileSelect(acceptedFiles[0]);
-      }
-    },
-    [onFileSelect]
-  );
+    // Size configurations
+    const sizeConfig = {
+        sm: {
+            padding: "p-8",
+            iconWrapperSize: "w-10 h-10",
+            iconSize: "20",
+            headingSize: "text-sm",
+            textSize: "text-xs",
+            subTextSize: "text-xs",
+        },
+        md: {
+            padding: "p-8",
+            iconWrapperSize: "w-12 h-12",
+            iconSize: "24",
+            headingSize: "text-lg",
+            textSize: "text-sm",
+            subTextSize: "text-xs",
+        },
+        lg: {
+            padding: "p-12",
+            iconWrapperSize: "w-16 h-16",
+            iconSize: "32",
+            headingSize: "text-xl",
+            textSize: "text-sm",
+            subTextSize: "text-xs",
+        },
+    };
 
-  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
-    onDrop,
-    accept: FILE_UPLOAD.MIME_TYPES,
-    maxSize: maxSizeMB * 1024 * 1024,
-    multiple: false,
-    disabled,
-  });
+    const config = sizeConfig[size];
+    const onDrop = useCallback(
+        (acceptedFiles: File[]) => {
+            if (acceptedFiles.length > 0) {
+                onFileSelect(acceptedFiles[0]);
+            }
+        },
+        [onFileSelect]
+    );
 
-  return (
-    <div
-      {...getRootProps()}
-      className={`
-        p-12 text-center rounded-xl border-2 border-dashed transition-all duration-200
-        ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+    const { getRootProps, getInputProps, isDragActive, fileRejections } =
+        useDropzone({
+            onDrop,
+            accept: FILE_UPLOAD.MIME_TYPES,
+            maxSize: maxSizeMB * 1024 * 1024,
+            multiple: false,
+            disabled,
+        });
+
+    return (
+        <div
+            {...getRootProps()}
+            className={`
         ${
-          isDragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-slate-300 bg-white hover:border-blue-500 hover:bg-blue-50'
+            config.padding
+        } text-center rounded-xl border-2 border-dashed transition-all group
+        ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+        ${
+            isDragActive
+                ? "border-blue-400 bg-blue-50"
+                : "border-slate-200 bg-white hover:border-blue-400 hover:bg-slate-50"
         }
-        ${disabled ? 'hover:border-slate-300 hover:bg-white' : ''}
+        ${disabled ? "hover:border-slate-200 hover:bg-white" : ""}
       `}
-    >
-      <input {...getInputProps()} />
+        >
+            <input {...getInputProps()} />
 
-      <Icon
-        icon="lucide:cloud-upload"
-        className={`mx-auto mb-4 ${isDragActive ? 'text-blue-600' : 'text-blue-500'}`}
-        width="64"
-      />
+            <div className={`${config.iconWrapperSize} bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+                <Icon
+                    icon="lucide:upload-cloud"
+                    width={config.iconSize}
+                />
+            </div>
 
-      <h3 className="text-xl font-semibold text-slate-900 mb-2">
-        {isDragActive ? 'Drop the file here' : 'Drag & drop your pitch deck'}
-      </h3>
+            <p className={`${config.headingSize} font-medium text-slate-900`}>
+                {isDragActive
+                    ? "Drop the file here"
+                    : "Click to upload or drag and drop"}
+            </p>
 
-      <p className="text-sm text-slate-500 mb-4">or click to browse</p>
+            <p className={`${config.subTextSize} text-slate-500 mt-1`}>
+                Supported formats: {acceptedFileTypes.join(", ")} (Max{" "}
+                {maxSizeMB}MB)
+            </p>
 
-      <p className="text-xs text-slate-400">
-        Supported formats: {acceptedFileTypes.join(', ')} (Max {maxSizeMB}MB)
-      </p>
-
-      {fileRejections.length > 0 && (
-        <div className="mt-4 text-red-600 text-sm font-medium">
-          {fileRejections[0].errors[0].message}
+            {fileRejections.length > 0 && (
+                <div className="mt-4 text-red-600 text-sm font-medium">
+                    {fileRejections[0].errors[0].message}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };

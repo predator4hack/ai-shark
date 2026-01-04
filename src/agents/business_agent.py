@@ -121,7 +121,7 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
             Fallback template string
         """
         return """
-        Analyze the following startup document and provide a comprehensive business analysis:
+        Analyze the following startup document and provide a CONCISE business analysis:
 
         DOCUMENT CONTENT:
         {document_content}
@@ -132,23 +132,17 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
         - File Name: {file_name}
         - Sections: {sections}
 
-        Please analyze the business comprehensively and provide your analysis in JSON format with these fields:
+        Provide your analysis in JSON format with these fields:
 
         {format_instructions}
 
-        Focus on these key areas:
-        1. REVENUE STREAMS: Identify all mentioned and implied revenue streams
-        2. BUSINESS MODEL: Describe and evaluate the business model approach
-        3. SCALABILITY: Assess how well the business can scale (high/medium/low)
-        4. COMPETITIVE POSITION: Analyze competitive advantages and positioning
-        5. VALUE PROPOSITION: Extract and evaluate the unique value proposition
-        6. TARGET MARKET: Identify target market segments and customer base
-        7. GROWTH STRATEGY: Evaluate expansion and growth plans
-        8. PARTNERSHIPS: Identify strategic partnerships or opportunities
-        9. REGULATORY CONSIDERATIONS: Note any regulatory challenges or requirements
+        Focus ONLY on these 4 critical areas (be concise):
+        1. REVENUE MODEL & VALUE PROP: Revenue streams, pricing, unique value (2-3 sentences)
+        2. MARKET POSITION: Target market, TAM/SAM, competitive advantages (2-3 sentences)
+        3. TOP 3 RISKS: Identify only the 3 most critical risks with severity (3 sentences)
+        4. TOP 2 OPPORTUNITIES: Key growth opportunities (2 sentences)
 
-        Be specific and cite evidence from the document. If information is missing
-        or unclear, note this explicitly in your analysis.
+        Keep analysis brief. Cite evidence. Note critical information gaps only.
         """
 
     def _get_combined_markdown_template(self) -> str:
@@ -158,50 +152,8 @@ class BusinessAnalysisAgent(BaseStructuredAgent):
         Returns:
             Markdown template string for combined analysis
         """
-        return """You are a senior business analyst. Analyze this startup using BOTH documents provided:
-
-PITCH DECK: {pitch_deck_content}
-
-PUBLIC DATA: {public_data_content}
-
-Create a comprehensive business analysis in markdown format with these sections:
-
-# Business Analysis Report
-
-## Executive Summary
-Brief overview combining insights from both sources.
-
-## Business Model & Revenue
-Detail business model, revenue streams, pricing strategy, and financial projections.
-
-## Market & Sector Analysis
-Sector-specific analysis, market size, positioning, and competitive landscape.
-
-## Technology & Scalability
-Technical capabilities, infrastructure, and scalability assessment.
-
-## Target Market & Customers
-Customer segments, market penetration strategy, and user acquisition.
-
-## Competitive Position
-Competitive advantages, differentiation, and market positioning.
-
-## Growth Strategy
-Expansion plans, partnership strategy, and scaling approach.
-
-## Risk Assessment
-Key business, market, technology, and regulatory risks.
-
-## Sector Insights
-Industry-specific trends, opportunities, and challenges.
-
-## Strategic Recommendations
-Actionable insights and strategic advice for growth.
-
-## Information Gaps
-Missing data that would enhance this analysis.
-
-Instructions: Use all available information, note gaps explicitly, provide sector-specific insights, cite evidence from documents, focus on actionable recommendations."""
+        # Load from prompts.yaml for centralized management
+        return self.prompt_manager.get_prompt_template("business_analysis_combined")
 
     def analyze_revenue_streams(self, document: StartupDocument) -> List[str]:
         """

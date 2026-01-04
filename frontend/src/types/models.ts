@@ -45,11 +45,40 @@ export interface AnalysisDocuments {
 
 export interface CompanyMetadata {
   company_name: string
+  startup_name?: string
+  sector?: string
+  sub_sector?: string
+  website?: string | null
   round?: string
   ask?: string
   valuation?: string
-  sector?: string
   [key: string]: any
+}
+
+// Multi-agent analysis types
+export interface AgentInfo {
+  agent_type: string
+  agent_name: string
+  description: string
+  available: boolean
+}
+
+export interface DiscoverAgentsResponse {
+  agents: AgentInfo[]
+  total_agents: number
+  available_agents: number
+}
+
+export interface RunAnalysisRequest {
+  company_name: string
+  selected_agents: string[]
+}
+
+export interface RunAnalysisResponse {
+  job_id: string
+  message: string
+  company_name: string
+  selected_agents: string[]
 }
 
 export interface AnalysisState {
@@ -68,4 +97,11 @@ export interface AnalysisState {
   currentActivePhase: number
   overallStatus: 'idle' | 'analyzing' | 'completed' | 'failed'
   error: string | null
+  uploadJobId: string | null
+  uploadStatus: 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
+  uploadProgress: string
+  // Phase 2: Multi-agent analysis
+  availableAgents: AgentInfo[]
+  selectedAgents: string[]
+  analysisJobId: string | null
 }

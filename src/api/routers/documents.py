@@ -46,8 +46,10 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
             output_dir=temp_output_dir
         )
 
-        # Get company name from result
-        company_name = result.get("company_name", "unknown")
+        # Get company name from result and sanitize it for directory naming
+        raw_company_name = result.get("company_name", "unknown")
+        from src.utils.output_manager import OutputManager
+        company_name = OutputManager.sanitize_company_name(raw_company_name)
 
         job_manager.update_status(
             job_id,
@@ -80,15 +82,21 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
         processing_time = time.time() - start_time
 
         # Update: Complete
+        # Add both raw and sanitized company names to metadata
+        metadata = result.get('metadata', {})
+        metadata['sanitized_company_name'] = company_name
+        if 'startup_name' in metadata:
+            metadata['raw_startup_name'] = metadata['startup_name']
+
         job_manager.update_status(
             job_id,
             JobStatus.COMPLETED,
             "Pitch deck processing completed!",
             result={
                 "success": True,
-                "company_name": company_name,
+                "company_name": company_name,  # This is the sanitized version
                 "files_created": files_created,
-                "metadata": result.get('metadata', {}),
+                "metadata": metadata,
                 "processing_time": processing_time
             }
         )

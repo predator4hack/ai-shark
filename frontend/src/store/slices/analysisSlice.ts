@@ -1,18 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
-import type { AnalysisState, CompanyMetadata, AgentWeights } from '../../types/models'
+import type { AnalysisState, CompanyMetadata, AgentWeights, AgentInfo } from '../../types/models'
 
 const initialState: AnalysisState = {
-  companyName: 'Nebula Robotics',
-  metadata: {
-    company_name: 'Nebula Robotics',
-    round: 'Series A',
-    ask: '$12M @ $60M Pre',
-    sector: 'Deep Tech / AI',
-  },
+  companyName: null,
+  metadata: null,
   documents: {
-    pitchDeckPath: 'Nebula_Robotics_Series_A.pdf',
-    additionalDocs: ['Nebula_Financials_FY23.xlsx'],
+    pitchDeckPath: null,
+    additionalDocs: [],
   },
   agentWeights: {
     business: { weight: 30, enabled: true },
@@ -24,8 +19,8 @@ const initialState: AnalysisState = {
   phases: {
     phase1: {
       id: 'phase1',
-      status: 'completed',
-      progressMessage: 'Pitch deck processed successfully',
+      status: 'pending',
+      progressMessage: '',
     },
     phase2: {
       id: 'phase2',
@@ -48,9 +43,16 @@ const initialState: AnalysisState = {
       progressMessage: '',
     },
   },
-  currentActivePhase: 2,
+  currentActivePhase: 1,
   overallStatus: 'idle',
   error: null,
+  uploadJobId: null,
+  uploadStatus: 'idle',
+  uploadProgress: '',
+  // Phase 2: Multi-agent analysis
+  availableAgents: [],
+  selectedAgents: [],
+  analysisJobId: null,
 }
 
 const analysisSlice = createSlice({
@@ -141,6 +143,102 @@ const analysisSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
+    setUploadJobId: (state, action: PayloadAction<string>) => {
+      state.uploadJobId = action.payload
+      state.uploadStatus = 'processing'
+      state.phases.phase1.status = 'running'
+      state.phases.phase1.progressMessage = 'Processing pitch deck...'
+    },
+    updateUploadStatus: (state, action: PayloadAction<{
+      status: 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
+      progressMessage: string
+    }>) => {
+      state.uploadStatus = action.payload.status
+      state.uploadProgress = action.payload.progressMessage
+      state.phases.phase1.progressMessage = action.payload.progressMessage
+    },
+    setUploadResult: (state, action: PayloadAction<{
+      companyName: string
+      metadata: CompanyMetadata
+      files: string[]
+    }>) => {
+      state.companyName = action.payload.companyName
+      state.metadata = action.payload.metadata
+      state.documents.pitchDeckPath = action.payload.files[0] || null
+      state.uploadStatus = 'completed'
+      state.phases.phase1.status = 'completed'
+      state.phases.phase1.progressMessage = 'Pitch deck processed successfully'
+      state.phases.phase1.result = { files: action.payload.files }
+      state.currentActivePhase = 2
+    },
+    setUploadError: (state, action: PayloadAction<string>) => {
+      state.uploadStatus = 'failed'
+      state.phases.phase1.status = 'failed'
+      state.phases.phase1.error = action.payload
+      state.error = action.payload
+    },
+    resetUpload: (state) => {
+      state.uploadJobId = null
+      state.uploadStatus = 'idle'
+      state.uploadProgress = ''
+      state.companyName = null
+      state.metadata = null
+      state.documents.pitchDeckPath = null
+      state.phases.phase1.status = 'pending'
+      state.phases.phase1.progressMessage = ''
+      state.phases.phase1.error = undefined
+      state.currentActivePhase = 1
+      state.error = null
+    },
+    // Phase 2: Multi-agent analysis actions
+    setAvailableAgents: (state, action: PayloadAction<AgentInfo[]>) => {
+      state.availableAgents = action.payload
+      // Auto-select all available agents by default
+      state.selectedAgents = action.payload
+        .filter(agent => agent.available)
+        .map(agent => agent.agent_type)
+    },
+    toggleAgentSelection: (state, action: PayloadAction<string>) => {
+      const agentType = action.payload
+      const index = state.selectedAgents.indexOf(agentType)
+      if (index > -1) {
+        // Deselect agent
+        state.selectedAgents = state.selectedAgents.filter(a => a !== agentType)
+      } else {
+        // Select agent (only if it's available)
+        const agent = state.availableAgents.find(a => a.agent_type === agentType)
+        if (agent && agent.available) {
+          state.selectedAgents.push(agentType)
+        }
+      }
+    },
+    setSelectedAgents: (state, action: PayloadAction<string[]>) => {
+      // Filter to only include available agents
+      const availableAgentTypes = state.availableAgents
+        .filter(a => a.available)
+        .map(a => a.agent_type)
+      state.selectedAgents = action.payload.filter(a =>
+        availableAgentTypes.includes(a)
+      )
+    },
+    setAnalysisJobId: (state, action: PayloadAction<string>) => {
+      state.analysisJobId = action.payload
+      state.phases.phase3.status = 'running'
+      state.phases.phase3.progressMessage = 'Running multi-agent analysis...'
+    },
+    setAnalysisResult: (state, action: PayloadAction<any>) => {
+      state.phases.phase3.status = 'completed'
+      state.phases.phase3.progressMessage = 'Multi-agent analysis completed!'
+      state.phases.phase3.result = action.payload
+      state.analysisJobId = null
+      state.currentActivePhase = 4
+    },
+    setAnalysisError: (state, action: PayloadAction<string>) => {
+      state.phases.phase3.status = 'failed'
+      state.phases.phase3.error = action.payload
+      state.error = action.payload
+      state.analysisJobId = null
+    },
     reset: () => {
       return initialState
     },
@@ -159,6 +257,17 @@ export const {
   setCurrentActivePhase,
   setError,
   clearError,
+  setUploadJobId,
+  updateUploadStatus,
+  setUploadResult,
+  setUploadError,
+  resetUpload,
+  setAvailableAgents,
+  toggleAgentSelection,
+  setSelectedAgents,
+  setAnalysisJobId,
+  setAnalysisResult,
+  setAnalysisError,
   reset,
 } = analysisSlice.actions
 

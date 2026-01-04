@@ -121,7 +121,7 @@ class MarketAnalysisAgent(BaseStructuredAgent):
             Fallback template string
         """
         return """
-        Analyze the following startup document and provide a comprehensive market analysis:
+        Analyze the following startup document and provide a CONCISE market analysis:
 
         DOCUMENT CONTENT:
         {document_content}
@@ -132,24 +132,17 @@ class MarketAnalysisAgent(BaseStructuredAgent):
         - File Name: {file_name}
         - Sections: {sections}
 
-        Please analyze the market comprehensively and provide your analysis in JSON format with these fields:
+        Provide your analysis in JSON format with these fields:
 
         {format_instructions}
 
-        Focus on these key areas:
-        1. MARKET SIZE: Identify TAM, SAM, SOM and overall market sizing
-        2. COMPETITION: Analyze competitive landscape and key competitors
-        3. POSITIONING: Evaluate market positioning strategy and differentiation
-        4. MARKET TRENDS: Identify relevant market trends and dynamics
-        5. CUSTOMER SEGMENTS: Define target customer segments and characteristics
-        6. GO-TO-MARKET: Evaluate go-to-market strategy and approach
-        7. GEOGRAPHIC FOCUS: Identify geographic markets and expansion plans
-        8. MARKET BARRIERS: Assess market entry barriers and challenges
-        9. MARKET OPPORTUNITIES: Identify key market opportunities and timing
+        Focus ONLY on these 4 critical areas (be concise):
+        1. MARKET OPPORTUNITY: TAM/SAM/SOM, CAGR, key growth drivers (2-3 sentences)
+        2. TOP 3 COMPETITORS: Name, position, differentiation (3 sentences, one per competitor)
+        3. GO-TO-MARKET: Customer acquisition, channels, barriers (2-3 sentences)
+        4. MARKET RISKS: Top 2-3 market-related risks only (2-3 sentences)
 
-        Be specific and cite evidence from the document. If information is missing
-        or unclear, note this explicitly in your analysis. Include specific data
-        points where available (market size figures, competitor names, etc.).
+        Keep analysis brief. Cite key data points. Note critical gaps only.
         """
 
     def _get_combined_markdown_template(self) -> str:
@@ -159,64 +152,8 @@ class MarketAnalysisAgent(BaseStructuredAgent):
         Returns:
             Markdown template string for combined market analysis
         """
-        return """You are a senior market analyst. Analyze this startup using BOTH documents provided:
-
-PITCH DECK: {pitch_deck_content}
-
-PUBLIC DATA: {public_data_content}
-
-Create a comprehensive market analysis in markdown format with these sections:
-
-# Market & Competition Analysis Report
-
-## Executive Summary
-Brief market overview combining insights from both sources.
-
-## Market Size & Opportunity
-Detail total addressable market (TAM), serviceable addressable market (SAM),
-serviceable obtainable market (SOM), and growth projections.
-
-## Competitive Landscape
-Comprehensive competitor analysis, market positioning, and competitive advantages.
-
-## Market Segmentation
-Customer segments, market penetration strategy, and addressable segments.
-
-## Market Trends & Dynamics
-Industry trends, market timing, adoption patterns, and growth drivers.
-
-## Geographic Analysis
-Target markets, regional opportunities, and expansion strategy.
-
-## Market Entry Strategy
-Go-to-market approach, customer acquisition strategy, and market penetration plan.
-
-## Entry Barriers & Challenges
-Market barriers, regulatory challenges, and competitive threats.
-
-## Market Timing & Validation
-Market readiness, product-market fit indicators, and timing analysis.
-
-## Customer Validation
-Evidence of customer demand, market testing, and validation metrics.
-
-## Competitive Positioning
-Differentiation strategy, competitive moats, and positioning advantages.
-
-## Market Risk Assessment
-Market risks, competitive threats, and potential challenges.
-
-## Strategic Market Recommendations
-Actionable market insights and strategic recommendations.
-
-## Information Gaps & Questions for Founders
-Missing market data that would enhance investment decision-making.
-Questions to ask the startup founders for better market assessment.
-
-Instructions: Focus on market opportunity assessment from an investor perspective.
-Identify data gaps and red flags. Provide sector-specific insights.
-Cite evidence from documents. Highlight any concerns or clarifications needed
-for investment decisions."""
+        # Load from prompts.yaml for centralized management
+        return self.prompt_manager.get_prompt_template("market_analysis_combined")
 
     def analyze_market_size(self, document: StartupDocument) -> Dict[str, Any]:
         """
