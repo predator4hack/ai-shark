@@ -18,6 +18,7 @@ services:
     environment:
       - USE_GCS=false
       - OUTPUT_DIR=/app/outputs
+      - USE_MOCK_LLM=${USE_MOCK_LLM:-false}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
       - API_PORT=8000
@@ -41,7 +42,7 @@ services:
       # Prevent node_modules from being overwritten
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000/api
+      - VITE_PROXY_TARGET=http://api:8000
     command: npm run dev -- --host 0.0.0.0
     networks:
       - ai-shark-network

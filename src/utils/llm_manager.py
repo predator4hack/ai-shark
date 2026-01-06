@@ -46,13 +46,17 @@ class LLMManager:
         self.gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
         self.prompt_manager = PromptManager()
 
-        # Mock mode detection
-        self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        # Mock mode detection with explicit logging
+        env_value = os.getenv("USE_MOCK_LLM", "false")
+        self.use_mock = env_value.lower() == "true"
+
+        logger.info(f"🔧 LLMManager initialization: USE_MOCK_LLM={env_value}, use_mock={self.use_mock}")
 
         if not self.use_mock:
+            logger.info("⚠️  Real LLM mode - configuring Gemini API")
             self._configure_gemini()
         else:
-            logger.info("Mock LLM mode enabled - skipping API configuration")
+            logger.info("✅ Mock LLM mode enabled - skipping API configuration")
 
         # For LangChain compatibility
         self.llm_instance: Optional[BaseLanguageModel] = None
@@ -387,31 +391,41 @@ class LLMManager:
             logger.error(f"Error generating founder responses: {e}")
             raise LLMConnectionError(f"Failed to generate founder responses: {e}")
 
-# Global instance for backward compatibility
-llm_manager = LLMManager()
+# Global instance for backward compatibility - using lazy initialization
+_llm_manager_instance = None
+
+def get_llm_manager() -> 'LLMManager':
+    """
+    Get or create LLMManager singleton instance.
+    Uses lazy initialization to ensure environment variables are loaded.
+    """
+    global _llm_manager_instance
+    if _llm_manager_instance is None:
+        _llm_manager_instance = LLMManager()
+    return _llm_manager_instance
 
 # Convenience functions for document processing (direct API)
 def extract_metadata(page_images: List[Image.Image]) -> Optional[Dict[str, Any]]:
     """Extract metadata from pitch deck images"""
-    return llm_manager.extract_metadata(page_images)
+    return get_llm_manager().extract_metadata(page_images)
 
 def extract_topic_data(topic: str, page_images: List[Image.Image]) -> str:
     """Extract topic data from images"""
-    return llm_manager.extract_topic_data(topic, page_images)
+    return get_llm_manager().extract_topic_data(topic, page_images)
 
 def structure_document_content(text: str, filename: str) -> str:
     """Structure document content using LLM"""
-    return llm_manager.structure_document_content(text, filename)
+    return get_llm_manager().structure_document_content(text, filename)
 
 def pdf_to_images(pdf_path: str) -> List[Image.Image]:
     """Convert PDF to images"""
-    return llm_manager.pdf_to_images(pdf_path)
+    return get_llm_manager().pdf_to_images(pdf_path)
 
 # Convenience functions for multi-agent system (LangChain)
 def get_langchain_llm(**kwargs) -> Optional[BaseLanguageModel]:
     """Get LangChain LLM instance"""
-    return llm_manager.create_langchain_llm(**kwargs)
+    return get_llm_manager().create_langchain_llm(**kwargs)
 
 def get_default_llm() -> Optional[BaseLanguageModel]:
     """Get default LangChain LLM instance"""
-    return llm_manager.get_default_langchain_llm()
+    return get_llm_manager().get_default_langchain_llm()

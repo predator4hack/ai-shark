@@ -1,0 +1,42 @@
+{
+  "startup_name": "TechVenture AI",
+  "sector": "Artificial Intelligence & Machine Learning",
+  "sub_sector": "Conversational AI for Business Analytics",
+  "website": "https://techventure-ai.example.com",
+  "table_of_contents": {
+    "Problem Statement": [
+      1,
+      2
+    ],
+    "Solution": [
+      3,
+      4
+    ],
+    "Market Opportunity": [
+      5,
+      6
+    ],
+    "Business Model": [
+      7,
+      8
+    ],
+    "Technology": [
+      9,
+      10
+    ],
+    "Traction": [
+      11,
+      12
+    ],
+    "Team": [
+      13
+    ],
+    "Financial Projections": [
+      14,
+      15
+    ],
+    "Ask": [
+      16
+    ]
+  }
+}

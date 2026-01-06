@@ -71,28 +71,53 @@ class QuestionnaireProcessor:
         print(f"✅ Ready for questionnaire generation: {len(analysis_files)} reports available")
         return True
     
-    def process_company_questionnaire(self, company_dir: str, 
+    def process_company_questionnaire(self, company_dir: str,
                                     config: Optional[QuestionnaireConfig] = None) -> QuestionnaireResult:
         """
         Process questionnaire generation for a single company
-        
+
         Args:
             company_dir: Path to company directory
             config: Optional questionnaire configuration
-            
+
         Returns:
             QuestionnaireResult with processing results
         """
         print(f"\n🎯 Processing Questionnaire for Company")
         print("=" * 50)
-        
+
         company_path = Path(company_dir)
         company_name = company_path.name
-        
+
         print(f"Company: {company_name}")
         print(f"Directory: {company_dir}")
-        
-        # Check if processing should proceed
+
+        # Check if questionnaire already exists
+        questionnaire_file = company_path / "founders-checklist.md"
+        if questionnaire_file.exists():
+            print(f"📄 Questionnaire already exists: {questionnaire_file}")
+
+            # Return existing questionnaire info instead of treating as failure
+            try:
+                import os
+                file_stats = os.stat(questionnaire_file)
+                return QuestionnaireResult(
+                    success=True,
+                    markdown_file=str(questionnaire_file),
+                    processing_time=0.0,
+                    error_message=None,
+                    metadata={
+                        "company_name": company_name,
+                        "already_existed": True,
+                        "file_size": file_stats.st_size,
+                        "modified_time": datetime.fromtimestamp(file_stats.st_mtime).isoformat()
+                    }
+                )
+            except Exception as e:
+                print(f"⚠️ Error reading existing questionnaire: {e}")
+                # Fall through to check if we should regenerate
+
+        # Check if processing should proceed (analysis files exist, etc.)
         if not self.should_run_questionnaire(company_dir):
             return QuestionnaireResult(
                 success=False,

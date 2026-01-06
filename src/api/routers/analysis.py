@@ -10,6 +10,7 @@ from ..models.analysis import (
 )
 from ..services.job_manager import job_manager, JobStatus
 from src.processors.analysis_pipeline import AnalysisPipeline
+from src.processors.questionnaire_processor import create_questionnaire_processor
 from src.utils.output_manager import OutputManager
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
@@ -84,27 +85,78 @@ def run_analysis_background(job_id: str, company_name: str, selected_agents: Lis
         # Generate markdown reports for each agent
         pipeline.generate_agent_specific_reports(analysis_results)
 
+        # Step 3: Generate questionnaire
+        questionnaire_result = None
+        try:
+            job_manager.update_status(
+                job_id,
+                JobStatus.PROCESSING,
+                "Generating founder questionnaire..."
+            )
+
+            questionnaire_processor = create_questionnaire_processor()
+            questionnaire_result = questionnaire_processor.run_post_analysis_questionnaire(
+                company_dir
+            )
+
+            if questionnaire_result.success:
+                print(f"✅ Questionnaire generated: {questionnaire_result.markdown_file}")
+            else:
+                print(f"⚠️ Questionnaire generation failed: {questionnaire_result.error_message}")
+
+        except Exception as e:
+            print(f"❌ Questionnaire generation error: {e}")
+            import traceback
+            traceback.print_exc()
+            questionnaire_result = None
+
         processing_time = time.time() - start_time
 
         # Count successful vs failed agents
         successful_count = sum(1 for r in analysis_results.values() if "error" not in r)
         failed_count = len(analysis_results) - successful_count
 
+        # Build comprehensive result
+        result = {
+            "success": True,
+            "company_name": company_name,
+            "sanitized_company_name": sanitized_company_name,
+            "selected_agents": selected_agents,
+            "analysis_results": analysis_results,
+            "successful_agents": successful_count,
+            "failed_agents": failed_count,
+            "processing_time": processing_time
+        }
+
+        # Add questionnaire result if available
+        if questionnaire_result:
+            import os
+            file_size = 0
+            if questionnaire_result.success and questionnaire_result.markdown_file:
+                try:
+                    file_size = os.path.getsize(questionnaire_result.markdown_file)
+                except:
+                    pass
+
+            result["questionnaire"] = {
+                "success": questionnaire_result.success,
+                "markdown_file": questionnaire_result.markdown_file,
+                "processing_time": questionnaire_result.processing_time,
+                "error_message": questionnaire_result.error_message,
+                "metadata": {
+                    **questionnaire_result.metadata,
+                    "file_size": file_size
+                }
+            }
+        else:
+            result["questionnaire"] = None
+
         # Update: Complete
         job_manager.update_status(
             job_id,
             JobStatus.COMPLETED,
             f"Analysis completed! {successful_count} agents successful, {failed_count} failed.",
-            result={
-                "success": True,
-                "company_name": company_name,
-                "sanitized_company_name": sanitized_company_name,
-                "selected_agents": selected_agents,
-                "analysis_results": analysis_results,
-                "successful_agents": successful_count,
-                "failed_agents": failed_count,
-                "processing_time": processing_time
-            }
+            result=result
         )
 
     except Exception as e:

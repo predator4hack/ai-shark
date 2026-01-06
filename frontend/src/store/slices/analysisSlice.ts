@@ -230,6 +230,12 @@ const analysisSlice = createSlice({
       state.phases.phase3.status = 'completed'
       state.phases.phase3.progressMessage = 'Multi-agent analysis completed!'
       state.phases.phase3.result = action.payload
+
+      // Extract questionnaire result
+      if (action.payload.questionnaire) {
+        state.phases.phase3.questionnaire = action.payload.questionnaire
+      }
+
       state.analysisJobId = null
       state.currentActivePhase = 4
     },
@@ -238,6 +244,12 @@ const analysisSlice = createSlice({
       state.phases.phase3.error = action.payload
       state.error = action.payload
       state.analysisJobId = null
+    },
+    setQuestionnaireError: (state, action: PayloadAction<string>) => {
+      if (state.phases.phase3.questionnaire) {
+        state.phases.phase3.questionnaire.success = false
+        state.phases.phase3.questionnaire.error_message = action.payload
+      }
     },
     reset: () => {
       return initialState
@@ -268,6 +280,7 @@ export const {
   setAnalysisJobId,
   setAnalysisResult,
   setAnalysisError,
+  setQuestionnaireError,
   reset,
 } = analysisSlice.actions
 

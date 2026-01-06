@@ -6,7 +6,7 @@ from PIL import Image
 from src.processors.base_processor import BaseProcessor
 from src.processors.file_converter import FileConverter
 from src.utils.output_manager import OutputManager
-from src.utils.llm_manager import llm_manager
+from src.utils.llm_manager import get_llm_manager
 
 class PitchDeckProcessor(BaseProcessor):
     """Processes pitch deck files (PDF and PPT)"""
@@ -14,6 +14,7 @@ class PitchDeckProcessor(BaseProcessor):
     def __init__(self):
         self.supported_extensions = ['.pdf', '.ppt', '.pptx']
         self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        self.llm_manager = get_llm_manager()  # Get at init time, not import time
     
     def get_supported_extensions(self) -> List[str]:
         """Return list of supported file extensions"""
@@ -161,7 +162,7 @@ class PitchDeckProcessor(BaseProcessor):
         if self.use_mock:
             print("Mock mode: Skipping PDF processing")
             return []
-        return llm_manager.pdf_to_images(pdf_path)
+        return self.llm_manager.pdf_to_images(pdf_path)
     
     def _process_ppt(self, ppt_path: str) -> List[Image.Image]:
         """Process PPT by converting to images"""
@@ -169,14 +170,14 @@ class PitchDeckProcessor(BaseProcessor):
         pdf_path = FileConverter.ppt_to_pdf(ppt_path)
         if pdf_path and os.path.exists(pdf_path):
             try:
-                images = llm_manager.pdf_to_images(pdf_path)
+                images = self.llm_manager.pdf_to_images(pdf_path)
                 os.unlink(pdf_path)  # Clean up temporary PDF
                 return images
             except Exception as e:
                 print(f"Error processing converted PDF: {e}")
                 if os.path.exists(pdf_path):
                     os.unlink(pdf_path)
-        
+
         # Fallback: direct PPT to images
         return FileConverter.ppt_to_images(ppt_path)
     
@@ -184,7 +185,7 @@ class PitchDeckProcessor(BaseProcessor):
         """
         Stage 1: Extract startup_name, sector, sub-sector, website, and table of contents
         """
-        return llm_manager.extract_metadata(images)
+        return self.llm_manager.extract_metadata(images)
     
     def _extract_topics(self, images: List[Image.Image], toc: Dict[str, List[int]]) -> Dict[str, Any]:
         """Stage 2: Topic-based content extraction"""
@@ -211,7 +212,7 @@ class PitchDeckProcessor(BaseProcessor):
             
             if topic_images:
                 try:
-                    topic_data = llm_manager.extract_topic_data(topic, topic_images)
+                    topic_data = self.llm_manager.extract_topic_data(topic, topic_images)
                     extracted_data[topic] = topic_data
                     print(f"Successfully extracted data for topic '{topic}'")
                 except Exception as e:

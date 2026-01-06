@@ -5,6 +5,7 @@ import { DragDropZone } from "../components/FileUpload/DragDropZone";
 import { documentsApi } from "../api/endpoints/documents";
 import { analysisApi } from "../api/endpoints/analysis";
 import { POLLING } from "../utils/constants";
+import type { QuestionnaireResult } from "../types/models";
 import {
     updatePhaseStatus,
     updateAgentWeights,
@@ -75,6 +76,14 @@ export const AnalysisPage: React.FC = () => {
     const [sliderValues, setSliderValues] = useState(agentWeights);
     const [uploadPolling, setUploadPolling] = useState(false);
     const [analysisPolling, setAnalysisPolling] = useState(false);
+    const [showQuestionnaireError, setShowQuestionnaireError] = useState(false);
+    const [showQuestionnairePreview, setShowQuestionnairePreview] = useState(false);
+
+    // Extract questionnaire data
+    const questionnaireResult = phases.phase3.questionnaire;
+    const hasQuestionnaire = questionnaireResult?.success || false;
+    const questionnaireError = questionnaireResult?.error_message || null;
+    const isSkippedGeneration = questionnaireResult?.metadata?.reason === 'skip_generation';
 
     // Handle file upload
     const handleFileSelect = async (file: File) => {
@@ -178,6 +187,16 @@ export const AnalysisPage: React.FC = () => {
 
                 if (status.status === "completed" && status.result) {
                     dispatch(setAnalysisResult(status.result));
+
+                    // Check for questionnaire errors and show modal
+                    const result = status.result as Record<string, unknown>;
+                    const questionnaire = result.questionnaire as QuestionnaireResult | undefined;
+                    if (questionnaire &&
+                        !questionnaire.success &&
+                        questionnaire.metadata?.reason !== 'skip_generation') {
+                        setShowQuestionnaireError(true);
+                    }
+
                     setAnalysisPolling(false);
                 } else if (status.status === "failed") {
                     dispatch(
@@ -349,6 +368,194 @@ export const AnalysisPage: React.FC = () => {
             default:
                 return null;
         }
+    };
+
+    // Questionnaire Card Component
+    const QuestionnaireCard: React.FC<{
+        result: QuestionnaireResult;
+        companyName: string;
+    }> = ({ result, companyName }) => {
+        const handlePreview = () => {
+            setShowQuestionnairePreview(true);
+        };
+
+        const handleDownload = () => {
+            const link = document.createElement('a');
+            link.href = `/api/v1/files/${companyName}/founders-checklist.md`;
+            link.download = 'founders-checklist.md';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        const fileName = result.markdown_file?.split('/').pop() || 'founders-checklist.md';
+        const processingTime = result.processing_time.toFixed(2);
+        const fileSize = result.metadata?.file_size
+            ? `${(result.metadata.file_size / 1024).toFixed(1)} KB`
+            : 'Size unknown';
+
+        return (
+            <div className="flex bg-white border-slate-200 border rounded-lg mb-4 pt-3 pr-3 pb-3 pl-3 shadow-sm items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center border border-blue-100">
+                        <Icon icon="lucide:file-text" width={20} />
+                    </div>
+                    <div>
+                        <div className="text-sm font-medium text-slate-900">{fileName}</div>
+                        <div className="text-xs text-slate-400">
+                            {fileSize} • Processed in {processingTime}s
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handlePreview}
+                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Preview questionnaire"
+                    >
+                        <Icon icon="lucide:eye" width={16} />
+                    </button>
+                    <button
+                        onClick={handleDownload}
+                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Download questionnaire"
+                    >
+                        <Icon icon="lucide:download" width={16} />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    // Questionnaire Error Modal Component
+    const QuestionnaireErrorModal: React.FC<{
+        error: string;
+        onClose: () => void;
+    }> = ({ error, onClose }) => {
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                    <div className="flex items-start gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                            <Icon icon="lucide:alert-circle" width={24} className="text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                                Questionnaire Generation Failed
+                            </h3>
+                            <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                                {error}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                                The analysis was successful, but we couldn&apos;t generate the founder questionnaire.
+                                You can proceed to the next step without it.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Questionnaire Preview Modal Component
+    const QuestionnairePreviewModal: React.FC<{
+        companyName: string;
+        onClose: () => void;
+    }> = ({ companyName, onClose }) => {
+        const [content, setContent] = useState<string>('');
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState<string | null>(null);
+
+        useEffect(() => {
+            const fetchContent = async () => {
+                try {
+                    const response = await fetch(`/api/v1/files/${companyName}/founders-checklist.md`);
+                    if (!response.ok) throw new Error('Failed to load file');
+                    const text = await response.text();
+                    setContent(text);
+                } catch (err) {
+                    setError('Failed to load questionnaire content');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchContent();
+        }, [companyName]);
+
+        const handleDownload = () => {
+            const link = document.createElement('a');
+            link.href = `/api/v1/files/${companyName}/founders-checklist.md`;
+            link.download = 'founders-checklist.md';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <Icon icon="lucide:file-text" width={24} className="text-blue-600" />
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Founder Questionnaire</h2>
+                                <p className="text-xs text-slate-500">Due Diligence Checklist</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            <Icon icon="lucide:x" width={20} className="text-slate-500" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                        {loading && (
+                            <div className="flex items-center justify-center h-64">
+                                <Icon icon="lucide:loader-2" width={32} className="animate-spin text-blue-600" />
+                            </div>
+                        )}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <p className="text-sm text-red-700">{error}</p>
+                            </div>
+                        )}
+                        {!loading && !error && (
+                            <div className="prose prose-sm max-w-none bg-white rounded-lg p-6 border border-slate-200">
+                                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-mono">
+                                    {content}
+                                </pre>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            Close
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                        >
+                            <Icon icon="lucide:download" width={16} />
+                            Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -774,6 +981,39 @@ export const AnalysisPage: React.FC = () => {
                                             );
                                         })}
                                     </div>
+
+                                    {/* Questionnaire Result Card - Shows after analysis completes */}
+                                    {hasQuestionnaire && questionnaireResult && companyName && (
+                                        <QuestionnaireCard
+                                            result={questionnaireResult}
+                                            companyName={companyName}
+                                        />
+                                    )}
+
+                                    {/* Questionnaire Error State */}
+                                    {questionnaireError &&
+                                     phases.phase3.status === 'completed' &&
+                                     !isSkippedGeneration && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                            <div className="flex items-start gap-3">
+                                                <Icon icon="lucide:alert-circle" width={20} className="text-red-600 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-semibold text-red-900">
+                                                        Questionnaire Generation Issue
+                                                    </h4>
+                                                    <p className="text-xs text-red-700 mt-1">
+                                                        {questionnaireError}
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setShowQuestionnaireError(true)}
+                                                        className="text-xs text-red-600 hover:underline mt-2"
+                                                    >
+                                                        View Details
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {selectedAgents.length > 0 && (
                                         <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
@@ -1290,6 +1530,22 @@ export const AnalysisPage: React.FC = () => {
                     </div>
                 </div>
             </footer>
+
+            {/* Questionnaire Error Modal */}
+            {showQuestionnaireError && questionnaireError && !isSkippedGeneration && (
+                <QuestionnaireErrorModal
+                    error={questionnaireError}
+                    onClose={() => setShowQuestionnaireError(false)}
+                />
+            )}
+
+            {/* Questionnaire Preview Modal */}
+            {showQuestionnairePreview && companyName && (
+                <QuestionnairePreviewModal
+                    companyName={companyName}
+                    onClose={() => setShowQuestionnairePreview(false)}
+                />
+            )}
         </div>
     );
 };

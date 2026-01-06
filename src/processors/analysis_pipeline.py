@@ -35,7 +35,7 @@ from ..utils.document_loader import DirectoryLoader, MarkdownParser
 from ..utils.output_manager import OutputManager
 from ..agents.base_agent import BaseAnalysisAgent
 from ..agents import *  # Import all agents
-from ..utils.llm_setup import get_llm, create_mock_llm, llm_setup
+from ..utils.llm_setup import get_llm, create_mock_llm, get_llm_setup
 from ..models.document_models import StartupDocument, DocumentMetadata, ParsedContent
 from ..models.analysis_models import BusinessAnalysis, MarketAnalysis
 from config.settings import settings
@@ -71,7 +71,7 @@ class AnalysisPipeline:
         
         print(f"🤖 LLM Mode: {'Real API' if use_real_llm else 'Mock/Demo'}")
         if use_real_llm:
-            print(f"🤖 Using real LLM: {llm_setup.get_model_info()}")
+            print(f"🤖 Using real LLM: {get_llm_setup().get_model_info()}")
         else:
             print("🤖 Using Mock LLM for demonstration")
         
@@ -861,7 +861,7 @@ For the complete analysis, please refer to the main report file.
         print("=" * 60)
         print(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         if self.use_real_llm:
-            print(f"LLM Provider: {llm_setup.get_model_info().get('provider', 'unknown')}")
+            print(f"LLM Provider: {get_llm_setup().get_model_info().get('provider', 'unknown')}")
         print(f"Use Real LLM: {self.use_real_llm}")
         print(f"Analysis Type: Multi-Agent Analysis (All Available Agents)")
         print(f"Company Directory: {self.company_dir}")

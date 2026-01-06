@@ -30,12 +30,28 @@ export interface AgentWeights {
   risk: AgentConfig
 }
 
+export interface QuestionnaireResult {
+  success: boolean
+  markdown_file: string | null
+  processing_time: number
+  error_message: string | null
+  metadata: {
+    company_name?: string
+    report_types?: string[]
+    total_reports?: number
+    file_size?: number
+    reason?: string
+    [key: string]: any
+  }
+}
+
 export interface PhaseResult {
   id: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   progressMessage: string
   result?: any
   error?: string
+  questionnaire?: QuestionnaireResult
 }
 
 export interface AnalysisDocuments {

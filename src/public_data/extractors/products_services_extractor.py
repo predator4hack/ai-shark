@@ -28,11 +28,12 @@ class ProductsServicesExtractor(BaseExtractor):
     def __init__(self):
         """Initialize the extractor with Gemini model configuration"""
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
-        
+
         # Verify Gemini is configured
         try:
             # Test that genai is properly configured
-            from src.utils.llm_manager import llm_manager
+            from src.utils.llm_manager import get_llm_manager
+            llm_manager = get_llm_manager()
             if not llm_manager.test_connection():
                 logger.warning("Gemini API connection test failed")
         except Exception as e:

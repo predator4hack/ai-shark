@@ -325,28 +325,38 @@ class LLMSetup:
             return {"provider": "unknown"}
 
 
-# Global LLM setup instance
-llm_setup = LLMSetup()
+# Global LLM setup instance - using lazy initialization
+_llm_setup_instance = None
+
+def get_llm_setup() -> 'LLMSetup':
+    """
+    Get or create LLMSetup singleton instance.
+    Uses lazy initialization to ensure environment variables are loaded.
+    """
+    global _llm_setup_instance
+    if _llm_setup_instance is None:
+        _llm_setup_instance = LLMSetup()
+    return _llm_setup_instance
 
 
 def get_llm() -> BaseLanguageModel:
     """Convenience function to get default LLM instance"""
-    return llm_setup.get_default_llm()
+    return get_llm_setup().get_default_llm()
 
 
 def create_custom_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create custom LLM instance"""
-    return llm_setup.create_llm(**kwargs)
+    return get_llm_setup().create_llm(**kwargs)
 
 
 def create_groq_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create Groq LLM instance"""
-    return llm_setup.create_llm(provider="groq", **kwargs)
+    return get_llm_setup().create_llm(provider="groq", **kwargs)
 
 
 def create_google_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create Google AI LLM instance"""
-    return llm_setup.create_llm(provider="google", **kwargs)
+    return get_llm_setup().create_llm(provider="google", **kwargs)
 
 
 # Testing utilities

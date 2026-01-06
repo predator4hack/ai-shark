@@ -14,13 +14,14 @@ from typing import Dict, List, Any
 
 from src.processors.base_processor import BaseProcessor
 from src.utils.output_manager import OutputManager
-from src.utils.llm_manager import llm_manager
+from src.utils.llm_manager import get_llm_manager
 
 class AdditionalDocProcessor(BaseProcessor):
     """Processes additional documents (transcripts, emails, updates)"""
-    
+
     def __init__(self):
         self.supported_extensions = ['.pdf', '.doc', '.docx', '.txt']
+        self.llm_manager = get_llm_manager()  # Get at init time, not import time
     
     def get_supported_extensions(self) -> List[str]:
         """Return list of supported file extensions"""
@@ -48,7 +49,7 @@ class AdditionalDocProcessor(BaseProcessor):
             
             # Structure content using LLM
             filename = Path(file_path).name
-            structured_content = llm_manager.structure_document_content(text_content, filename)
+            structured_content = self.llm_manager.structure_document_content(text_content, filename)
             
             # Convert to markdown
             markdown_content = self._text_to_markdown(structured_content, filename)
