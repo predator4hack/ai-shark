@@ -227,17 +227,40 @@ const analysisSlice = createSlice({
       state.phases.phase3.progressMessage = 'Running multi-agent analysis...'
     },
     setAnalysisResult: (state, action: PayloadAction<any>) => {
-      state.phases.phase3.status = 'completed'
-      state.phases.phase3.progressMessage = 'Multi-agent analysis completed!'
+      // Extract questionnaire result first
+      const questionnaireResult = action.payload.questionnaire
+
+      // Store the result
       state.phases.phase3.result = action.payload
 
-      // Extract questionnaire result
-      if (action.payload.questionnaire) {
-        state.phases.phase3.questionnaire = action.payload.questionnaire
+      if (questionnaireResult) {
+        state.phases.phase3.questionnaire = questionnaireResult
+
+        // Check questionnaire status
+        if (questionnaireResult.success) {
+          // Success - mark Phase 3 complete
+          state.phases.phase3.status = 'completed'
+          state.phases.phase3.progressMessage = 'Multi-agent analysis completed!'
+          state.currentActivePhase = 4
+        } else if (questionnaireResult.metadata?.reason === 'skip_generation') {
+          // Intentionally skipped - still mark as complete
+          state.phases.phase3.status = 'completed'
+          state.phases.phase3.progressMessage = 'Multi-agent analysis completed (questionnaire skipped)'
+          state.currentActivePhase = 4
+        } else {
+          // Failed - mark Phase 3 as failed
+          state.phases.phase3.status = 'failed'
+          state.phases.phase3.error = questionnaireResult.error_message || 'Questionnaire generation failed'
+          state.phases.phase3.progressMessage = 'Analysis completed, but questionnaire generation failed'
+        }
+      } else {
+        // No questionnaire in result - treat as error
+        state.phases.phase3.status = 'failed'
+        state.phases.phase3.error = 'Questionnaire result missing from analysis'
+        state.phases.phase3.progressMessage = 'Analysis completed, but questionnaire result is missing'
       }
 
       state.analysisJobId = null
-      state.currentActivePhase = 4
     },
     setAnalysisError: (state, action: PayloadAction<string>) => {
       state.phases.phase3.status = 'failed'

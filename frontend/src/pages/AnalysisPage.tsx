@@ -56,6 +56,12 @@ const ALL_AGENTS = [
     }
 ] as const;
 
+// Helper to check if questionnaire is available for Phase 4
+const isQuestionnaireAvailable = (questionnaire?: QuestionnaireResult): boolean => {
+    if (!questionnaire) return false;
+    return questionnaire.success || questionnaire.metadata?.reason === 'skip_generation';
+};
+
 export const AnalysisPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const {
@@ -1024,6 +1030,30 @@ export const AnalysisPage: React.FC = () => {
                                         </div>
                                     )}
 
+                                    {/* Phase 3 Failed - Retry Button */}
+                                    {phases.phase3.status === "failed" && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                            <div className="flex items-start gap-3">
+                                                <Icon icon="lucide:alert-circle" width={20} className="text-red-600 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-semibold text-red-900">
+                                                        Analysis Failed
+                                                    </h4>
+                                                    <p className="text-xs text-red-700 mt-1">
+                                                        {phases.phase3.error || "An error occurred during multi-agent analysis"}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={handleRunAnalysis}
+                                                    disabled={selectedAgents.length === 0}
+                                                    className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Retry Analysis
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={handleRunAnalysis}
                                         disabled={
@@ -1086,7 +1116,37 @@ export const AnalysisPage: React.FC = () => {
                                             questions.
                                         </p>
                                     </div>
-                                    {getStatusBadge(phases.phase4.status)}
+                                    <div className="flex items-center gap-2">
+                                        {phases.phase3.status === "completed" && isQuestionnaireAvailable(phases.phase3.questionnaire) ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-slate-400">
+                                                    Questionnaire Ready
+                                                </span>
+                                                <Icon icon="lucide:check-circle-2" className="text-green-500" width={14} />
+                                            </>
+                                        ) : phases.phase3.status === "running" ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-orange-500">
+                                                    Waiting for Analysis
+                                                </span>
+                                                <Icon icon="lucide:clock" className="text-orange-500" width={14} />
+                                            </>
+                                        ) : phases.phase3.status === "failed" ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-red-500">
+                                                    Analysis Failed
+                                                </span>
+                                                <Icon icon="lucide:x-circle" className="text-red-500" width={14} />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-[10px] font-medium text-red-500">
+                                                    Locked
+                                                </span>
+                                                <Icon icon="lucide:lock" className="text-red-500" width={14} />
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="p-5">
@@ -1191,6 +1251,7 @@ export const AnalysisPage: React.FC = () => {
                                             disabled={
                                                 phases.phase3.status !==
                                                     "completed" ||
+                                                !isQuestionnaireAvailable(phases.phase3.questionnaire) ||
                                                 phases.phase4.status ===
                                                     "running"
                                             }
