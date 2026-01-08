@@ -5,7 +5,9 @@ import { FILE_UPLOAD } from "../../utils/constants";
 
 interface DragDropZoneProps {
     onFileSelect: (file: File) => void;
+    accept?: Record<string, string[]>;
     acceptedFileTypes?: string[];
+    maxSize?: number;
     maxSizeMB?: number;
     disabled?: boolean;
     size?: "sm" | "md" | "lg";
@@ -13,7 +15,9 @@ interface DragDropZoneProps {
 
 export const DragDropZone: React.FC<DragDropZoneProps> = ({
     onFileSelect,
+    accept,
     acceptedFileTypes = FILE_UPLOAD.ACCEPTED_TYPES,
+    maxSize,
     maxSizeMB = FILE_UPLOAD.MAX_SIZE_MB,
     disabled = false,
     size = "sm",
@@ -59,8 +63,8 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({
     const { getRootProps, getInputProps, isDragActive, fileRejections } =
         useDropzone({
             onDrop,
-            accept: FILE_UPLOAD.MIME_TYPES,
-            maxSize: maxSizeMB * 1024 * 1024,
+            accept: accept || FILE_UPLOAD.MIME_TYPES,
+            maxSize: (maxSize || maxSizeMB * 1024 * 1024),
             multiple: false,
             disabled,
         });

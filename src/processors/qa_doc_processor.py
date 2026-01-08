@@ -62,20 +62,30 @@ class QADocProcessor:
     
     def process_qa_document(self, uploaded_file: Any, company_dir: str) -> SimulationResult:
         """
-        Process Q&A document and create ans-founders-checklist.md
-        
+        Process Q&A document and create founders-qa-responses.md
+
         Args:
-            uploaded_file: Uploaded file object from Streamlit
+            uploaded_file: Uploaded file object from Streamlit OR file path string from API
             company_dir: Path to company directory
-            
+
         Returns:
             SimulationResult with processing status
         """
         start_time = time.time()
-        
-        print(f"\n📝 Processing Q&A document: {uploaded_file.name}")
+
+        # Handle both file objects (Streamlit) and file paths (FastAPI)
+        if isinstance(uploaded_file, str):
+            # File path from API
+            file_name = Path(uploaded_file).name
+            temp_file = uploaded_file
+        else:
+            # File object from Streamlit
+            file_name = uploaded_file.name
+            temp_file = self._save_temp_file(uploaded_file)
+
+        print(f"\n📝 Processing Q&A document: {file_name}")
         print(f"Company Directory: {company_dir}")
-        
+
         # Validate prerequisites
         validation = self.validate_company_directory(company_dir)
         if not validation['valid']:
@@ -85,10 +95,9 @@ class QADocProcessor:
                 processing_time=time.time() - start_time,
                 metadata={'validation_errors': validation['errors']}
             )
-        
+
         try:
-            # Extract text content from uploaded document
-            temp_file = self._save_temp_file(uploaded_file)
+            # Extract text content from document
             
             try:
                 text_content = self.additional_doc_processor._extract_text(temp_file)
@@ -121,8 +130,8 @@ class QADocProcessor:
                 mapped_responses = self.map_to_founders_checklist(qa_pairs, checklist_questions)
                 
                 # Save results
-                output_path = Path(company_dir) / "ans-founders-checklist.md"
-                success = self.save_qa_responses(mapped_responses, str(output_path), uploaded_file.name)
+                output_path = Path(company_dir) / "founders-qa-responses.md"
+                success = self.save_qa_responses(mapped_responses, str(output_path), file_name)
                 
                 processing_time = time.time() - start_time
                 
@@ -136,7 +145,7 @@ class QADocProcessor:
                         processing_time=processing_time,
                         metadata={
                             'processing_type': 'direct_qa',
-                            'source_document': uploaded_file.name,
+                            'source_document': file_name,
                             'qa_pairs_extracted': len(qa_pairs),
                             'responses_generated': len(mapped_responses),
                             'checklist_questions': len(checklist_questions)
@@ -150,8 +159,8 @@ class QADocProcessor:
                     )
                     
             finally:
-                # Clean up temporary file
-                if os.path.exists(temp_file):
+                # Clean up temporary file only if we created it (not from API)
+                if not isinstance(uploaded_file, str) and os.path.exists(temp_file):
                     os.unlink(temp_file)
                     
         except Exception as e:
@@ -270,7 +279,7 @@ class QADocProcessor:
     
     def save_qa_responses(self, qa_entries: List[QAEntry], output_path: str, source_filename: str) -> bool:
         """
-        Save Q&A responses to ans-founders-checklist.md
+        Save Q&A responses to founders-qa-responses.md
         
         Args:
             qa_entries: List of QA entries

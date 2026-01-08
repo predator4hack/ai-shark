@@ -37,3 +37,15 @@ class RunAnalysisResponse(BaseModel):
     message: str
     company_name: str
     selected_agents: List[str]
+
+
+class SimulateQARequest(BaseModel):
+    """Request model for simulating Q&A responses"""
+    company_name: str = Field(..., description="Company name from Phase 1")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "company_name": "TechVenture AI"
+            }
+        }

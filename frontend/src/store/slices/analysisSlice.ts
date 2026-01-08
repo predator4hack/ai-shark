@@ -53,6 +53,8 @@ const initialState: AnalysisState = {
   availableAgents: [],
   selectedAgents: [],
   analysisJobId: null,
+  // Phase 4: Founder simulation
+  simulationJobId: null,
 }
 
 const analysisSlice = createSlice({
@@ -274,6 +276,30 @@ const analysisSlice = createSlice({
         state.phases.phase3.questionnaire.error_message = action.payload
       }
     },
+    setSimulationJobId: (state, action: PayloadAction<string>) => {
+      state.simulationJobId = action.payload
+      state.phases.phase4.status = 'running'
+      state.phases.phase4.progressMessage = 'Processing Q&A simulation...'
+    },
+    setSimulationResult: (state, action: PayloadAction<any>) => {
+      state.phases.phase4.simulationResult = action.payload
+
+      if (action.payload.success && action.payload.qa_file) {
+        state.phases.phase4.status = 'completed'
+        state.phases.phase4.progressMessage = 'Q&A simulation completed!'
+        state.currentActivePhase = 5
+      } else {
+        state.phases.phase4.status = 'failed'
+        state.phases.phase4.error = action.payload.error_message || 'Simulation failed'
+      }
+
+      state.simulationJobId = null
+    },
+    setSimulationError: (state, action: PayloadAction<string>) => {
+      state.phases.phase4.status = 'failed'
+      state.phases.phase4.error = action.payload
+      state.simulationJobId = null
+    },
     reset: () => {
       return initialState
     },
@@ -304,6 +330,9 @@ export const {
   setAnalysisResult,
   setAnalysisError,
   setQuestionnaireError,
+  setSimulationJobId,
+  setSimulationResult,
+  setSimulationError,
   reset,
 } = analysisSlice.actions
 

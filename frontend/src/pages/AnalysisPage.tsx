@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { DragDropZone } from "../components/FileUpload/DragDropZone";
 import { documentsApi } from "../api/endpoints/documents";
 import { analysisApi } from "../api/endpoints/analysis";
+import { simulationApi } from "../api/endpoints/simulation";
 import { POLLING } from "../utils/constants";
 import type { QuestionnaireResult } from "../types/models";
 import {
@@ -22,44 +23,56 @@ import {
     setAnalysisJobId,
     setAnalysisResult,
     setAnalysisError,
+    setSimulationJobId,
+    setSimulationResult,
+    setSimulationError,
 } from "../store/slices/analysisSlice";
 
 // Define all 4 agent cards - always shown regardless of availability
 const ALL_AGENTS = [
     {
-        agent_type: 'market',
-        agent_name: 'Market Analysis Agent',
-        description: 'Analyzes TAM, SAM, CAGR and competitive landscape density.',
-        color: 'blue',
-        icon: 'lucide:trending-up'
+        agent_type: "market",
+        agent_name: "Market Analysis Agent",
+        description:
+            "Analyzes TAM, SAM, CAGR and competitive landscape density.",
+        color: "blue",
+        icon: "lucide:trending-up",
     },
     {
-        agent_type: 'tech',
-        agent_name: 'Technical Analysis Agent',
-        description: 'Evaluates architecture stack, IP defensibility, and roadmap feasibility.',
-        color: 'purple',
-        icon: 'lucide:cpu'
+        agent_type: "tech",
+        agent_name: "Technical Analysis Agent",
+        description:
+            "Evaluates architecture stack, IP defensibility, and roadmap feasibility.",
+        color: "purple",
+        icon: "lucide:cpu",
     },
     {
-        agent_type: 'risk',
-        agent_name: 'Risk Assessment Agent',
-        description: 'Identifies regulatory hurdles, execution risks, and cap table issues.',
-        color: 'orange',
-        icon: 'lucide:shield-alert'
+        agent_type: "risk",
+        agent_name: "Risk Assessment Agent",
+        description:
+            "Identifies regulatory hurdles, execution risks, and cap table issues.",
+        color: "orange",
+        icon: "lucide:shield-alert",
     },
     {
-        agent_type: 'business',
-        agent_name: 'Business Analysis Agent',
-        description: 'Audits unit economics, GTM strategy, and financial projections.',
-        color: 'emerald',
-        icon: 'lucide:briefcase'
-    }
+        agent_type: "business",
+        agent_name: "Business Analysis Agent",
+        description:
+            "Audits unit economics, GTM strategy, and financial projections.",
+        color: "emerald",
+        icon: "lucide:briefcase",
+    },
 ] as const;
 
 // Helper to check if questionnaire is available for Phase 4
-const isQuestionnaireAvailable = (questionnaire?: QuestionnaireResult): boolean => {
+const isQuestionnaireAvailable = (
+    questionnaire?: QuestionnaireResult
+): boolean => {
     if (!questionnaire) return false;
-    return questionnaire.success || questionnaire.metadata?.reason === 'skip_generation';
+    return (
+        questionnaire.success ||
+        questionnaire.metadata?.reason === "skip_generation"
+    );
 };
 
 export const AnalysisPage: React.FC = () => {
@@ -77,19 +90,23 @@ export const AnalysisPage: React.FC = () => {
         availableAgents,
         selectedAgents,
         analysisJobId,
+        simulationJobId,
     } = useAppSelector((state) => state.analysis);
 
     const [sliderValues, setSliderValues] = useState(agentWeights);
     const [uploadPolling, setUploadPolling] = useState(false);
     const [analysisPolling, setAnalysisPolling] = useState(false);
+    const [simulationPolling, setSimulationPolling] = useState(false);
     const [showQuestionnaireError, setShowQuestionnaireError] = useState(false);
-    const [showQuestionnairePreview, setShowQuestionnairePreview] = useState(false);
+    const [showQuestionnairePreview, setShowQuestionnairePreview] =
+        useState(false);
 
     // Extract questionnaire data
     const questionnaireResult = phases.phase3.questionnaire;
     const hasQuestionnaire = questionnaireResult?.success || false;
     const questionnaireError = questionnaireResult?.error_message || null;
-    const isSkippedGeneration = questionnaireResult?.metadata?.reason === 'skip_generation';
+    const isSkippedGeneration =
+        questionnaireResult?.metadata?.reason === "skip_generation";
 
     // Handle file upload
     const handleFileSelect = async (file: File) => {
@@ -196,10 +213,14 @@ export const AnalysisPage: React.FC = () => {
 
                     // Check for questionnaire errors and show modal
                     const result = status.result as Record<string, unknown>;
-                    const questionnaire = result.questionnaire as QuestionnaireResult | undefined;
-                    if (questionnaire &&
+                    const questionnaire = result.questionnaire as
+                        | QuestionnaireResult
+                        | undefined;
+                    if (
+                        questionnaire &&
                         !questionnaire.success &&
-                        questionnaire.metadata?.reason !== 'skip_generation') {
+                        questionnaire.metadata?.reason !== "skip_generation"
+                    ) {
                         setShowQuestionnaireError(true);
                     }
 
@@ -219,6 +240,41 @@ export const AnalysisPage: React.FC = () => {
 
         return () => clearInterval(pollInterval);
     }, [analysisPolling, analysisJobId, dispatch]);
+
+    // Poll simulation job status
+    useEffect(() => {
+        if (!simulationPolling || !simulationJobId) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const status = await documentsApi.getJobStatus(simulationJobId);
+
+                dispatch(
+                    updatePhaseStatus({
+                        phaseId: "phase4",
+                        status: status.status as any,
+                        progressMessage: status.progress_message,
+                    })
+                );
+
+                if (status.status === "completed" && status.result) {
+                    dispatch(setSimulationResult(status.result));
+                    setSimulationPolling(false);
+                } else if (status.status === "failed") {
+                    dispatch(
+                        setSimulationError(status.error || "Simulation failed")
+                    );
+                    setSimulationPolling(false);
+                }
+            } catch (error: any) {
+                console.error("Simulation polling error:", error);
+                dispatch(setSimulationError("Failed to fetch simulation status"));
+                setSimulationPolling(false);
+            }
+        }, POLLING.INTERVAL_MS);
+
+        return () => clearInterval(pollInterval);
+    }, [simulationPolling, simulationJobId, dispatch]);
 
     // Handle reset
     const handleResetUpload = () => {
@@ -249,25 +305,42 @@ export const AnalysisPage: React.FC = () => {
         }
     };
 
-    const handleGenerateSimulation = () => {
-        // TODO: Connect to backend - POST /api/analysis/generate-simulation
-        dispatch(
-            updatePhaseStatus({
-                phaseId: "phase4",
-                status: "running",
-                progressMessage: "Generating founder responses...",
-            })
-        );
-        setTimeout(() => {
+    const handleSimulateQA = async () => {
+        if (!companyName) {
+            dispatch(setSimulationError("Company name is required"));
+            return;
+        }
+
+        try {
+            const response = await simulationApi.simulateQA(companyName);
+            dispatch(setSimulationJobId(response.job_id));
+            setSimulationPolling(true);
+        } catch (error: any) {
             dispatch(
-                updatePhaseStatus({
-                    phaseId: "phase4",
-                    status: "completed",
-                    progressMessage: "Simulation complete",
-                    result: {},
-                })
+                setSimulationError(
+                    error.response?.data?.detail || "Failed to start simulation"
+                )
             );
-        }, 2500);
+        }
+    };
+
+    const handleDirectQAUpload = async (file: File) => {
+        if (!companyName) {
+            dispatch(setSimulationError("Company name is required"));
+            return;
+        }
+
+        try {
+            const response = await simulationApi.uploadDirectQA(file, companyName);
+            dispatch(setSimulationJobId(response.job_id));
+            setSimulationPolling(true);
+        } catch (error: any) {
+            dispatch(
+                setSimulationError(
+                    error.response?.data?.detail || "Failed to upload Q&A document"
+                )
+            );
+        }
     };
 
     const handleGenerateMemo = () => {
@@ -386,19 +459,20 @@ export const AnalysisPage: React.FC = () => {
         };
 
         const handleDownload = () => {
-            const link = document.createElement('a');
+            const link = document.createElement("a");
             link.href = `/api/v1/files/${companyName}/founders-checklist.md`;
-            link.download = 'founders-checklist.md';
+            link.download = "founders-checklist.md";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         };
 
-        const fileName = result.markdown_file?.split('/').pop() || 'founders-checklist.md';
+        const fileName =
+            result.markdown_file?.split("/").pop() || "founders-checklist.md";
         const processingTime = result.processing_time.toFixed(2);
         const fileSize = result.metadata?.file_size
             ? `${(result.metadata.file_size / 1024).toFixed(1)} KB`
-            : 'Size unknown';
+            : "Size unknown";
 
         return (
             <div className="flex bg-white border-slate-200 border rounded-lg mb-4 pt-3 pr-3 pb-3 pl-3 shadow-sm items-center justify-between">
@@ -407,7 +481,9 @@ export const AnalysisPage: React.FC = () => {
                         <Icon icon="lucide:file-text" width={20} />
                     </div>
                     <div>
-                        <div className="text-sm font-medium text-slate-900">{fileName}</div>
+                        <div className="text-sm font-medium text-slate-900">
+                            {fileName}
+                        </div>
                         <div className="text-xs text-slate-400">
                             {fileSize} • Processed in {processingTime}s
                         </div>
@@ -443,7 +519,11 @@ export const AnalysisPage: React.FC = () => {
                 <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-2xl">
                     <div className="flex items-start gap-4 mb-4">
                         <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                            <Icon icon="lucide:alert-circle" width={24} className="text-red-600" />
+                            <Icon
+                                icon="lucide:alert-circle"
+                                width={24}
+                                className="text-red-600"
+                            />
                         </div>
                         <div className="flex-1">
                             <h3 className="text-lg font-semibold text-slate-900 mb-2">
@@ -453,8 +533,10 @@ export const AnalysisPage: React.FC = () => {
                                 {error}
                             </p>
                             <p className="text-xs text-slate-500">
-                                The analysis was successful, but we couldn&apos;t generate the founder questionnaire.
-                                You can proceed to the next step without it.
+                                The analysis was successful, but we
+                                couldn&apos;t generate the founder
+                                questionnaire. You can proceed to the next step
+                                without it.
                             </p>
                         </div>
                     </div>
@@ -476,19 +558,21 @@ export const AnalysisPage: React.FC = () => {
         companyName: string;
         onClose: () => void;
     }> = ({ companyName, onClose }) => {
-        const [content, setContent] = useState<string>('');
+        const [content, setContent] = useState<string>("");
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
 
         useEffect(() => {
             const fetchContent = async () => {
                 try {
-                    const response = await fetch(`/api/v1/files/${companyName}/founders-checklist.md`);
-                    if (!response.ok) throw new Error('Failed to load file');
+                    const response = await fetch(
+                        `/api/v1/files/${companyName}/founders-checklist.md`
+                    );
+                    if (!response.ok) throw new Error("Failed to load file");
                     const text = await response.text();
                     setContent(text);
                 } catch (err) {
-                    setError('Failed to load questionnaire content');
+                    setError("Failed to load questionnaire content");
                 } finally {
                     setLoading(false);
                 }
@@ -497,9 +581,9 @@ export const AnalysisPage: React.FC = () => {
         }, [companyName]);
 
         const handleDownload = () => {
-            const link = document.createElement('a');
+            const link = document.createElement("a");
             link.href = `/api/v1/files/${companyName}/founders-checklist.md`;
-            link.download = 'founders-checklist.md';
+            link.download = "founders-checklist.md";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -510,24 +594,40 @@ export const AnalysisPage: React.FC = () => {
                 <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
                     <div className="flex items-center justify-between p-6 border-b border-slate-200">
                         <div className="flex items-center gap-3">
-                            <Icon icon="lucide:file-text" width={24} className="text-blue-600" />
+                            <Icon
+                                icon="lucide:file-text"
+                                width={24}
+                                className="text-blue-600"
+                            />
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Founder Questionnaire</h2>
-                                <p className="text-xs text-slate-500">Due Diligence Checklist</p>
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Founder Questionnaire
+                                </h2>
+                                <p className="text-xs text-slate-500">
+                                    Due Diligence Checklist
+                                </p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
                             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                         >
-                            <Icon icon="lucide:x" width={20} className="text-slate-500" />
+                            <Icon
+                                icon="lucide:x"
+                                width={20}
+                                className="text-slate-500"
+                            />
                         </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
                         {loading && (
                             <div className="flex items-center justify-center h-64">
-                                <Icon icon="lucide:loader-2" width={32} className="animate-spin text-blue-600" />
+                                <Icon
+                                    icon="lucide:loader-2"
+                                    width={32}
+                                    className="animate-spin text-blue-600"
+                                />
                             </div>
                         )}
                         {error && (
@@ -937,32 +1037,55 @@ export const AnalysisPage: React.FC = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                                         {ALL_AGENTS.map((agentDef) => {
                                             // Check if this agent is discovered and available
-                                            const discoveredAgent = availableAgents.find(a => a.agent_type === agentDef.agent_type);
-                                            const isAvailable = discoveredAgent?.available || false;
-                                            const isPhase1Complete = phases.phase1.status === "completed";
-                                            const isDisabled = !isAvailable || !isPhase1Complete;
-                                            const isSelected = selectedAgents.includes(agentDef.agent_type);
+                                            const discoveredAgent =
+                                                availableAgents.find(
+                                                    (a) =>
+                                                        a.agent_type ===
+                                                        agentDef.agent_type
+                                                );
+                                            const isAvailable =
+                                                discoveredAgent?.available ||
+                                                false;
+                                            const isPhase1Complete =
+                                                phases.phase1.status ===
+                                                "completed";
+                                            const isDisabled =
+                                                !isAvailable ||
+                                                !isPhase1Complete;
+                                            const isSelected =
+                                                selectedAgents.includes(
+                                                    agentDef.agent_type
+                                                );
 
                                             return (
                                                 <div
                                                     key={agentDef.agent_type}
                                                     onClick={() => {
                                                         if (!isDisabled) {
-                                                            dispatch(toggleAgentSelection(agentDef.agent_type));
+                                                            dispatch(
+                                                                toggleAgentSelection(
+                                                                    agentDef.agent_type
+                                                                )
+                                                            );
                                                         }
                                                     }}
                                                     className={`p-4 rounded-xl border bg-white transition-all ${
                                                         isDisabled
                                                             ? "border-slate-200 opacity-50 cursor-not-allowed"
-                                                            : "cursor-pointer hover:shadow-sm " + (isSelected
-                                                                ? `border-${agentDef.color}-400 shadow-md ring-2 ring-${agentDef.color}-100`
-                                                                : `border-slate-200 hover:border-${agentDef.color}-200`)
+                                                            : "cursor-pointer hover:shadow-sm " +
+                                                              (isSelected
+                                                                  ? `border-${agentDef.color}-400 shadow-md ring-2 ring-${agentDef.color}-100`
+                                                                  : `border-slate-200 hover:border-${agentDef.color}-200`)
                                                     }`}
                                                 >
                                                     <div className="flex items-start justify-between mb-3">
-                                                        <div className={`p-2 rounded-lg bg-${agentDef.color}-50 text-${agentDef.color}-600`}>
+                                                        <div
+                                                            className={`p-2 rounded-lg bg-${agentDef.color}-50 text-${agentDef.color}-600`}
+                                                        >
                                                             <Icon
-                                                                icon={agentDef.icon}
+                                                                icon={
+                                                                    agentDef.icon
+                                                                }
                                                                 width={18}
                                                             />
                                                         </div>
@@ -971,11 +1094,12 @@ export const AnalysisPage: React.FC = () => {
                                                                 Locked
                                                             </span>
                                                         )}
-                                                        {isPhase1Complete && !isAvailable && (
-                                                            <span className="text-[9px] font-medium text-slate-400 uppercase px-2 py-1 bg-slate-100 rounded">
-                                                                Unavailable
-                                                            </span>
-                                                        )}
+                                                        {isPhase1Complete &&
+                                                            !isAvailable && (
+                                                                <span className="text-[9px] font-medium text-slate-400 uppercase px-2 py-1 bg-slate-100 rounded">
+                                                                    Unavailable
+                                                                </span>
+                                                            )}
                                                     </div>
                                                     <h3 className="text-xs font-semibold text-slate-900">
                                                         {agentDef.agent_name}
@@ -989,43 +1113,62 @@ export const AnalysisPage: React.FC = () => {
                                     </div>
 
                                     {/* Questionnaire Result Card - Shows after analysis completes */}
-                                    {hasQuestionnaire && questionnaireResult && companyName && (
-                                        <QuestionnaireCard
-                                            result={questionnaireResult}
-                                            companyName={companyName}
-                                        />
-                                    )}
+                                    {hasQuestionnaire &&
+                                        questionnaireResult &&
+                                        companyName && (
+                                            <QuestionnaireCard
+                                                result={questionnaireResult}
+                                                companyName={companyName}
+                                            />
+                                        )}
 
                                     {/* Questionnaire Error State */}
                                     {questionnaireError &&
-                                     phases.phase3.status === 'completed' &&
-                                     !isSkippedGeneration && (
-                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                                            <div className="flex items-start gap-3">
-                                                <Icon icon="lucide:alert-circle" width={20} className="text-red-600 mt-0.5" />
-                                                <div className="flex-1">
-                                                    <h4 className="text-sm font-semibold text-red-900">
-                                                        Questionnaire Generation Issue
-                                                    </h4>
-                                                    <p className="text-xs text-red-700 mt-1">
-                                                        {questionnaireError}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setShowQuestionnaireError(true)}
-                                                        className="text-xs text-red-600 hover:underline mt-2"
-                                                    >
-                                                        View Details
-                                                    </button>
+                                        phases.phase3.status === "completed" &&
+                                        !isSkippedGeneration && (
+                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                                <div className="flex items-start gap-3">
+                                                    <Icon
+                                                        icon="lucide:alert-circle"
+                                                        width={20}
+                                                        className="text-red-600 mt-0.5"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <h4 className="text-sm font-semibold text-red-900">
+                                                            Questionnaire
+                                                            Generation Issue
+                                                        </h4>
+                                                        <p className="text-xs text-red-700 mt-1">
+                                                            {questionnaireError}
+                                                        </p>
+                                                        <button
+                                                            onClick={() =>
+                                                                setShowQuestionnaireError(
+                                                                    true
+                                                                )
+                                                            }
+                                                            className="text-xs text-red-600 hover:underline mt-2"
+                                                        >
+                                                            View Details
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
                                     {selectedAgents.length > 0 && (
                                         <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
                                             <p className="text-xs text-blue-700">
-                                                <Icon icon="lucide:info" className="inline mr-1" width={14} />
-                                                {selectedAgents.length} agent{selectedAgents.length > 1 ? 's' : ''} selected
+                                                <Icon
+                                                    icon="lucide:info"
+                                                    className="inline mr-1"
+                                                    width={14}
+                                                />
+                                                {selectedAgents.length} agent
+                                                {selectedAgents.length > 1
+                                                    ? "s"
+                                                    : ""}{" "}
+                                                selected
                                             </p>
                                         </div>
                                     )}
@@ -1034,18 +1177,26 @@ export const AnalysisPage: React.FC = () => {
                                     {phases.phase3.status === "failed" && (
                                         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                                             <div className="flex items-start gap-3">
-                                                <Icon icon="lucide:alert-circle" width={20} className="text-red-600 mt-0.5" />
+                                                <Icon
+                                                    icon="lucide:alert-circle"
+                                                    width={20}
+                                                    className="text-red-600 mt-0.5"
+                                                />
                                                 <div className="flex-1">
                                                     <h4 className="text-sm font-semibold text-red-900">
                                                         Analysis Failed
                                                     </h4>
                                                     <p className="text-xs text-red-700 mt-1">
-                                                        {phases.phase3.error || "An error occurred during multi-agent analysis"}
+                                                        {phases.phase3.error ||
+                                                            "An error occurred during multi-agent analysis"}
                                                     </p>
                                                 </div>
                                                 <button
                                                     onClick={handleRunAnalysis}
-                                                    disabled={selectedAgents.length === 0}
+                                                    disabled={
+                                                        selectedAgents.length ===
+                                                        0
+                                                    }
                                                     className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     Retry Analysis
@@ -1059,7 +1210,8 @@ export const AnalysisPage: React.FC = () => {
                                         disabled={
                                             phases.phase1.status !==
                                                 "completed" ||
-                                            phases.phase3.status === "running" ||
+                                            phases.phase3.status ===
+                                                "running" ||
                                             selectedAgents.length === 0
                                         }
                                         className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1109,41 +1261,63 @@ export const AnalysisPage: React.FC = () => {
                                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                     <div>
                                         <h2 className="text-sm font-semibold text-slate-900">
-                                            4. Founder Simulation
+                                            4. Data Curation
                                         </h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            Simulate Q&A to answer standard DD
-                                            questions.
+                                            Answer the questionnare document
+                                            prepared in the previous step to
+                                            prepare detailed analysis
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {phases.phase3.status === "completed" && isQuestionnaireAvailable(phases.phase3.questionnaire) ? (
+                                        {phases.phase3.status === "completed" &&
+                                        isQuestionnaireAvailable(
+                                            phases.phase3.questionnaire
+                                        ) ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-slate-400">
                                                     Questionnaire Ready
                                                 </span>
-                                                <Icon icon="lucide:check-circle-2" className="text-green-500" width={14} />
+                                                <Icon
+                                                    icon="lucide:check-circle-2"
+                                                    className="text-green-500"
+                                                    width={14}
+                                                />
                                             </>
-                                        ) : phases.phase3.status === "running" ? (
+                                        ) : phases.phase3.status ===
+                                          "running" ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-orange-500">
                                                     Waiting for Analysis
                                                 </span>
-                                                <Icon icon="lucide:clock" className="text-orange-500" width={14} />
+                                                <Icon
+                                                    icon="lucide:clock"
+                                                    className="text-orange-500"
+                                                    width={14}
+                                                />
                                             </>
-                                        ) : phases.phase3.status === "failed" ? (
+                                        ) : phases.phase3.status ===
+                                          "failed" ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-red-500">
                                                     Analysis Failed
                                                 </span>
-                                                <Icon icon="lucide:x-circle" className="text-red-500" width={14} />
+                                                <Icon
+                                                    icon="lucide:x-circle"
+                                                    className="text-red-500"
+                                                    width={14}
+                                                />
                                             </>
                                         ) : (
                                             <>
                                                 <span className="text-[10px] font-medium text-red-500">
                                                     Locked
                                                 </span>
-                                                <Icon icon="lucide:lock" className="text-red-500" width={14} />
+                                                <Icon
+                                                    icon="lucide:lock"
+                                                    className="text-red-500"
+                                                    width={14}
+                                                />
                                             </>
                                         )}
                                     </div>
@@ -1170,7 +1344,7 @@ export const AnalysisPage: React.FC = () => {
                                             />
                                             <div className="px-4 py-1.5 rounded-md text-xs font-medium text-slate-500 transition-all flex items-center gap-2 border border-transparent">
                                                 <div className="w-2 h-2 rounded-full border border-slate-400 radio-dot bg-transparent"></div>
-                                                Context Simulation
+                                                Simulate Response
                                             </div>
                                         </label>
                                         <label className="flex-1 sm:flex-none cursor-pointer">
@@ -1198,86 +1372,188 @@ export const AnalysisPage: React.FC = () => {
                                         </label>
                                     </div>
 
-                                    <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-4">
-                                        <div className="flex gap-3">
-                                            <div className="mt-0.5 text-blue-500">
-                                                <Icon
-                                                    icon="lucide:info"
-                                                    width={16}
-                                                />
+                                    {simulationMode === "context" ? (
+                                        <>
+                                            <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-6">
+                                                <div className="flex gap-3">
+                                                    <div className="mt-0.5 text-blue-500">
+                                                        <Icon
+                                                            icon="lucide:info"
+                                                            width={16}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-semibold text-blue-900">
+                                                            AI Simulation Mode
+                                                        </h4>
+                                                        <p className="text-[11px] leading-relaxed text-blue-700/80 mt-1">
+                                                            The system will use the questionnaire from Phase 3 and analysis reports to generate contextual Q&A responses.
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-xs font-semibold text-blue-900">
-                                                    Context Mode Active
-                                                </h4>
-                                                <p className="text-[11px] leading-relaxed text-blue-700/80 mt-1">
-                                                    The system will use the
-                                                    Pitch Deck and processed
-                                                    documents to infer answers
-                                                    to a standard VC Due
-                                                    Diligence Questionnaire.
-                                                </p>
+
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={handleSimulateQA}
+                                                    disabled={
+                                                        phases.phase3.status !==
+                                                            "completed" ||
+                                                        !isQuestionnaireAvailable(
+                                                            phases.phase3.questionnaire
+                                                        ) ||
+                                                        phases.phase4.status ===
+                                                            "running" ||
+                                                        simulationJobId !== null
+                                                    }
+                                                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {(phases.phase4.status ===
+                                                        "running" ||
+                                                        simulationJobId !== null) ? (
+                                                        <>
+                                                            <Icon
+                                                                icon="lucide:loader-2"
+                                                                width={12}
+                                                                className="animate-spin"
+                                                            />
+                                                            Generating Responses...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Icon
+                                                                icon="lucide:sparkles"
+                                                                width={12}
+                                                            />
+                                                            Simulate Questionnaire Response
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="bg-purple-50/50 border border-purple-100 rounded-lg p-4 mb-6">
+                                                <div className="flex gap-3">
+                                                    <div className="mt-0.5 text-purple-500">
+                                                        <Icon
+                                                            icon="lucide:upload"
+                                                            width={16}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-semibold text-purple-900">
+                                                            Direct Upload Mode
+                                                        </h4>
+                                                        <p className="text-[11px] leading-relaxed text-purple-700/80 mt-1">
+                                                            Upload your pre-answered Q&A document (MD, PDF, or DOCX format).
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div className="border border-slate-200 rounded-lg p-4 bg-white mb-6">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="text-xs font-medium text-slate-700">
-                                                Upload Emails / Transcripts
-                                                (Optional)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400">
-                                                Enriches the founder persona
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <button className="px-3 py-1.5 border border-slate-200 hover:border-blue-400 hover:text-blue-600 rounded-md text-xs text-slate-500 bg-slate-50 transition-colors flex items-center gap-2">
-                                                <Icon
-                                                    icon="lucide:plus"
-                                                    width={14}
-                                                />
-                                                Add Files
-                                            </button>
-                                            <span className="text-[10px] text-slate-400 italic">
-                                                No files selected
-                                            </span>
-                                        </div>
-                                    </div>
+                                            <DragDropZone
+                                                onFileSelect={handleDirectQAUpload}
+                                                accept={{
+                                                    'text/markdown': ['.md'],
+                                                    'application/pdf': ['.pdf'],
+                                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                                    'text/plain': ['.txt']
+                                                }}
+                                                maxSize={10 * 1024 * 1024}
+                                                disabled={
+                                                    phases.phase3.status !== "completed" ||
+                                                    !isQuestionnaireAvailable(phases.phase3.questionnaire) ||
+                                                    phases.phase4.status === "running" ||
+                                                    simulationJobId !== null
+                                                }
+                                            />
 
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={handleGenerateSimulation}
-                                            disabled={
-                                                phases.phase3.status !==
-                                                    "completed" ||
-                                                !isQuestionnaireAvailable(phases.phase3.questionnaire) ||
-                                                phases.phase4.status ===
-                                                    "running"
-                                            }
-                                            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {phases.phase4.status ===
-                                            "running" ? (
-                                                <>
+                                            {(phases.phase4.status === "running" || simulationJobId !== null) && (
+                                                <div className="mt-4 flex items-center gap-2 text-xs text-slate-600">
                                                     <Icon
                                                         icon="lucide:loader-2"
-                                                        width={12}
+                                                        width={14}
                                                         className="animate-spin"
                                                     />
-                                                    Generating...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Icon
-                                                        icon="lucide:sparkles"
-                                                        width={12}
-                                                    />
-                                                    Generate Q&A Responses
-                                                </>
+                                                    Processing uploaded Q&A document...
+                                                </div>
                                             )}
-                                        </button>
-                                    </div>
+                                        </>
+                                    )}
+
+                                    {phases.phase4.status === "failed" && (
+                                        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex gap-3">
+                                                <div className="mt-0.5 text-red-500">
+                                                    <Icon
+                                                        icon="lucide:alert-circle"
+                                                        width={18}
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-semibold text-red-900">
+                                                        {simulationMode === "context" ? "Simulation Failed" : "Upload Processing Failed"}
+                                                    </h4>
+                                                    <p className="text-xs text-red-700 mt-1">
+                                                        {phases.phase4.error ||
+                                                            "An error occurred during processing"}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        if (simulationMode === "context") {
+                                                            handleSimulateQA();
+                                                        }
+                                                    }}
+                                                    className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors"
+                                                >
+                                                    Retry
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {phases.phase4.status === "completed" && phases.phase4.simulationResult && (
+                                        <div className="mt-6 pt-6 border-t border-slate-100">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-xs font-semibold text-slate-900">
+                                                    Q&A Responses Generated
+                                                </h4>
+                                                <span className="text-[10px] text-green-600 flex items-center gap-1">
+                                                    <Icon icon="lucide:check-circle-2" width={12} />
+                                                    Complete
+                                                </span>
+                                            </div>
+                                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <Icon
+                                                            icon="lucide:file-text"
+                                                            width={20}
+                                                            className="text-slate-400"
+                                                        />
+                                                        <div>
+                                                            <p className="text-xs font-medium text-slate-900">
+                                                                founders-qa-responses.md
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-500">
+                                                                Generated via {phases.phase4.simulationResult.metadata?.mode === 'ai_simulation' ? 'AI Simulation' : 'Direct Upload'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <a
+                                                        href={`/api/v1/files/download?path=${encodeURIComponent(phases.phase4.simulationResult.qa_file || '')}`}
+                                                        download
+                                                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <Icon icon="lucide:download" width={12} />
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1309,7 +1585,53 @@ export const AnalysisPage: React.FC = () => {
                                             final PDF/Doc.
                                         </p>
                                     </div>
-                                    {getStatusBadge(phases.phase5.status)}
+                                    <div className="flex items-center gap-2">
+                                        {phases.phase4.status === "completed" && phases.phase4.simulationResult?.qa_file ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-slate-400">
+                                                    Ready to Generate
+                                                </span>
+                                                <Icon
+                                                    icon="lucide:check-circle-2"
+                                                    className="text-green-500"
+                                                    width={14}
+                                                />
+                                            </>
+                                        ) : phases.phase4.status === "running" ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-orange-500">
+                                                    Waiting for Simulation
+                                                </span>
+                                                <Icon
+                                                    icon="lucide:clock"
+                                                    className="text-orange-500"
+                                                    width={14}
+                                                />
+                                            </>
+                                        ) : phases.phase4.status === "failed" ? (
+                                            <>
+                                                <span className="text-[10px] font-medium text-red-500">
+                                                    Simulation Failed
+                                                </span>
+                                                <Icon
+                                                    icon="lucide:x-circle"
+                                                    className="text-red-500"
+                                                    width={14}
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-[10px] font-medium text-red-500">
+                                                    Locked
+                                                </span>
+                                                <Icon
+                                                    icon="lucide:lock"
+                                                    className="text-red-500"
+                                                    width={14}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="p-6">
@@ -1543,6 +1865,9 @@ export const AnalysisPage: React.FC = () => {
                                             disabled={
                                                 phases.phase3.status !==
                                                     "completed" ||
+                                                phases.phase4.status !==
+                                                    "completed" ||
+                                                !phases.phase4.simulationResult?.qa_file ||
                                                 getTotalWeight() !== 100 ||
                                                 phases.phase5.status ===
                                                     "running"
@@ -1593,12 +1918,14 @@ export const AnalysisPage: React.FC = () => {
             </footer>
 
             {/* Questionnaire Error Modal */}
-            {showQuestionnaireError && questionnaireError && !isSkippedGeneration && (
-                <QuestionnaireErrorModal
-                    error={questionnaireError}
-                    onClose={() => setShowQuestionnaireError(false)}
-                />
-            )}
+            {showQuestionnaireError &&
+                questionnaireError &&
+                !isSkippedGeneration && (
+                    <QuestionnaireErrorModal
+                        error={questionnaireError}
+                        onClose={() => setShowQuestionnaireError(false)}
+                    />
+                )}
 
             {/* Questionnaire Preview Modal */}
             {showQuestionnairePreview && companyName && (

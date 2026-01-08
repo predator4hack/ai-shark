@@ -1,12 +1,15 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form
 from typing import List
 import time
+import os
+import shutil
 
 from ..models.analysis import (
     RunAnalysisRequest,
     RunAnalysisResponse,
     DiscoverAgentsResponse,
-    AgentInfo
+    AgentInfo,
+    SimulateQARequest
 )
 from ..services.job_manager import job_manager, JobStatus
 from src.processors.analysis_pipeline import AnalysisPipeline
@@ -286,4 +289,300 @@ async def run_agents(
         message=f"Multi-agent analysis started with {len(request.selected_agents)} agents.",
         company_name=request.company_name,
         selected_agents=request.selected_agents
+    )
+
+
+def run_simulation_background(job_id: str, company_name: str):
+    """
+    Background task to run AI Q&A simulation.
+    Uses questionnaire from Phase 3 and analysis reports as reference.
+    """
+    start_time = time.time()
+
+    try:
+        # Update: Starting simulation
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Starting Q&A simulation..."
+        )
+
+        # Sanitize company name for directory consistency
+        sanitized_company_name = OutputManager.sanitize_company_name(company_name)
+        company_dir = f"outputs/{sanitized_company_name}"
+
+        # Check prerequisites
+        checklist_path = os.path.join(company_dir, "founders-checklist.md")
+        if not os.path.exists(checklist_path):
+            raise Exception("Questionnaire not found. Please complete Phase 3 first.")
+
+        # Initialize FounderSimulationAgent
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Initializing AI simulation..."
+        )
+
+        from src.agents.founder_simulation_agent import FounderSimulationAgent
+        from src.models.founder_simulation_models import FounderSimulationConfig
+
+        # Create config to use analysis reports instead of ref-data
+        config = FounderSimulationConfig(
+            company_dir=company_dir,
+            simulation_type="reference_docs",
+            use_real_llm=True
+        )
+
+        agent = FounderSimulationAgent()
+
+        # Update: Generating responses
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Generating AI responses from context..."
+        )
+
+        # Run simulation
+        result = agent.process_simulation(company_dir, config)
+
+        if not result.success:
+            raise Exception(result.error_message or "Simulation processing failed")
+
+        processing_time = time.time() - start_time
+
+        # Build response
+        qa_result = {
+            "success": True,
+            "qa_file": result.output_file,
+            "processing_time": processing_time,
+            "metadata": {
+                "mode": "ai_simulation",
+                **(result.metadata or {})
+            }
+        }
+
+        # Update: Complete
+        job_manager.update_status(
+            job_id,
+            JobStatus.COMPLETED,
+            "Q&A simulation completed successfully!",
+            result=qa_result
+        )
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error running Q&A simulation: {error_details}")
+
+        job_manager.update_status(
+            job_id,
+            JobStatus.FAILED,
+            f"Simulation failed: {str(e)}",
+            error=str(e)
+        )
+
+
+def run_qa_upload_background(job_id: str, company_name: str, temp_file_path: str):
+    """
+    Background task for processing directly uploaded Q&A document.
+    Extracts Q&A pairs and saves as founders-qa-responses.md.
+    """
+    start_time = time.time()
+
+    try:
+        # Update: Starting processing
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Processing uploaded Q&A document..."
+        )
+
+        # Sanitize company name
+        sanitized_company_name = OutputManager.sanitize_company_name(company_name)
+        company_dir = f"outputs/{sanitized_company_name}"
+
+        # Verify company directory exists
+        if not os.path.exists(company_dir):
+            raise Exception(f"Company directory not found: {company_dir}")
+
+        # Process with QADocProcessor
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Extracting Q&A pairs from document..."
+        )
+
+        from src.processors.qa_doc_processor import QADocProcessor
+
+        processor = QADocProcessor()
+        result = processor.process_qa_document(temp_file_path, company_dir)
+
+        if not result.success:
+            raise Exception(result.error_message or "Q&A processing failed")
+
+        processing_time = time.time() - start_time
+
+        # Build response
+        qa_result = {
+            "success": True,
+            "qa_file": result.output_file,
+            "processing_time": processing_time,
+            "metadata": {
+                "mode": "direct_upload",
+                **(result.metadata or {})
+            }
+        }
+
+        # Update: Complete
+        job_manager.update_status(
+            job_id,
+            JobStatus.COMPLETED,
+            "Q&A document processed successfully!",
+            result=qa_result
+        )
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error processing Q&A upload: {error_details}")
+
+        job_manager.update_status(
+            job_id,
+            JobStatus.FAILED,
+            f"Upload processing failed: {str(e)}",
+            error=str(e)
+        )
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except:
+                pass
+
+
+@router.post("/simulate-qa", response_model=RunAnalysisResponse)
+async def simulate_qa_responses(
+    request: SimulateQARequest,
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """
+    Simulate founder Q&A responses using AI based on questionnaire and company context.
+
+    Requires Phase 3 (questionnaire generation) to be completed first.
+    Uses questionnaire from Phase 3 and analysis reports as reference documents.
+    """
+
+    # Validate request
+    if not request.company_name or not request.company_name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Company name is required"
+        )
+
+    # Check if company directory exists
+    sanitized_company_name = OutputManager.sanitize_company_name(request.company_name)
+    company_dir = f"outputs/{sanitized_company_name}"
+
+    if not os.path.exists(company_dir):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Company directory not found. Please complete Phase 1 first."
+        )
+
+    # Check if questionnaire exists (Phase 3 requirement)
+    checklist_path = os.path.join(company_dir, "founders-checklist.md")
+    if not os.path.exists(checklist_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Questionnaire not found. Please complete Phase 3 (multi-agent analysis) first."
+        )
+
+    # Create job
+    job_id = job_manager.create_job()
+
+    # Start background simulation
+    background_tasks.add_task(
+        run_simulation_background,
+        job_id,
+        request.company_name
+    )
+
+    return RunAnalysisResponse(
+        job_id=job_id,
+        message="Q&A simulation started.",
+        company_name=request.company_name,
+        selected_agents=[]
+    )
+
+
+@router.post("/upload-qa", response_model=RunAnalysisResponse)
+async def upload_qa_document(
+    file: UploadFile = File(...),
+    company_name: str = Form(...),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """
+    Upload pre-answered Q&A document (MD, PDF, DOCX).
+
+    Processes and saves as founders-qa-responses.md.
+    """
+
+    # Validate company name
+    if not company_name or not company_name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Company name is required"
+        )
+
+    # Validate file format
+    allowed_extensions = [".md", ".pdf", ".docx", ".txt"]
+    file_ext = os.path.splitext(file.filename)[1].lower()
+
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file format. Allowed: {', '.join(allowed_extensions)}"
+        )
+
+    # Check company directory exists
+    sanitized_company_name = OutputManager.sanitize_company_name(company_name)
+    company_dir = f"outputs/{sanitized_company_name}"
+
+    if not os.path.exists(company_dir):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Company directory not found. Please complete Phase 1 first."
+        )
+
+    # Save uploaded file temporarily
+    temp_dir = "outputs/temp"
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_file_path = os.path.join(temp_dir, f"{sanitized_company_name}_qa_upload{file_ext}")
+
+    try:
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save uploaded file: {str(e)}"
+        )
+
+    # Create job
+    job_id = job_manager.create_job()
+
+    # Start background processing
+    background_tasks.add_task(
+        run_qa_upload_background,
+        job_id,
+        company_name,
+        temp_file_path
+    )
+
+    return RunAnalysisResponse(
+        job_id=job_id,
+        message="Q&A document upload started. Processing...",
+        company_name=company_name,
+        selected_agents=[]
     )

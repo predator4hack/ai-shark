@@ -195,17 +195,17 @@ class FinalMemoProcessor:
     
     def load_founders_checklist(self, company_dir: str) -> Optional[str]:
         """
-        Load content from ans-founders-checklist.md
-        
+        Load content from founders-qa-responses.md
+
         Args:
             company_dir: Path to company directory
-            
+
         Returns:
-            Founders checklist content or None if not found
+            Founders Q&A responses content or None if not found
         """
         try:
             company_path = Path(company_dir)
-            checklist_file = company_path / "ans-founders-checklist.md"
+            checklist_file = company_path / "founders-qa-responses.md"
             
             if not checklist_file.exists():
                 logger.error(f"Founders checklist not found: {checklist_file}")
@@ -235,10 +235,10 @@ class FinalMemoProcessor:
             Validated FinalMemoRequest or None if creation fails
         """
         try:
-            # Load founders checklist
+            # Load founders Q&A responses
             founders_content = self.load_founders_checklist(company_dir)
             if not founders_content:
-                raise ValueError("ans-founders-checklist.md not found or empty")
+                raise ValueError("founders-qa-responses.md not found or empty")
             
             # Load analysis content
             analysis_dir = str(Path(company_dir) / "analysis")
@@ -292,7 +292,7 @@ class FinalMemoProcessor:
             if not request:
                 return FinalMemoResult(
                     success=False,
-                    error_message="Failed to create memo request. Check that ans-founders-checklist.md exists and analysis files are available.",
+                    error_message="Failed to create memo request. Check that founders-qa-responses.md exists and analysis files are available.",
                     pdf_file=""
                 )
             
@@ -410,10 +410,10 @@ class FinalMemoProcessor:
             issues.append(f"Company directory does not exist: {company_dir}")
             return False, issues
         
-        # Check for founders checklist
-        checklist_file = company_path / "ans-founders-checklist.md"
+        # Check for founders Q&A responses
+        checklist_file = company_path / "founders-qa-responses.md"
         if not checklist_file.exists():
-            issues.append("ans-founders-checklist.md not found. Please complete founder simulation first.")
+            issues.append("founders-qa-responses.md not found. Please complete founder simulation first.")
         
         # Check for analysis directory
         analysis_dir = company_path / "analysis"

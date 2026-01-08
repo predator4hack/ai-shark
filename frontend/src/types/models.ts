@@ -45,6 +45,20 @@ export interface QuestionnaireResult {
   }
 }
 
+export interface SimulationResult {
+  success: boolean
+  qa_file: string | null
+  processing_time: number
+  metadata?: {
+    mode: 'ai_simulation' | 'direct_upload'
+    questions_answered?: number
+    confidence_avg?: number
+    file_size?: number
+    [key: string]: any
+  }
+  error_message?: string | null
+}
+
 export interface PhaseResult {
   id: string
   status: 'pending' | 'running' | 'completed' | 'failed'
@@ -52,6 +66,7 @@ export interface PhaseResult {
   result?: any
   error?: string
   questionnaire?: QuestionnaireResult
+  simulationResult?: SimulationResult
 }
 
 export interface AnalysisDocuments {
@@ -116,8 +131,10 @@ export interface AnalysisState {
   uploadJobId: string | null
   uploadStatus: 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
   uploadProgress: string
-  // Phase 2: Multi-agent analysis
+  // Phase 3: Multi-agent analysis
   availableAgents: AgentInfo[]
   selectedAgents: string[]
   analysisJobId: string | null
+  // Phase 4: Founder simulation
+  simulationJobId: string | null
 }
