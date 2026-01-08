@@ -9,7 +9,9 @@ from ..models.analysis import (
     RunAnalysisResponse,
     DiscoverAgentsResponse,
     AgentInfo,
-    SimulateQARequest
+    SimulateQARequest,
+    GenerateMemoRequest,
+    GenerateMemoResponse
 )
 from ..services.job_manager import job_manager, JobStatus
 from src.processors.analysis_pipeline import AnalysisPipeline
@@ -327,10 +329,14 @@ def run_simulation_background(job_id: str, company_name: str):
         from src.models.founder_simulation_models import FounderSimulationConfig
 
         # Create config to use analysis reports instead of ref-data
+        # Respect USE_MOCK_LLM environment variable
+        use_mock_llm = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        use_real_llm = not use_mock_llm
+
         config = FounderSimulationConfig(
             company_dir=company_dir,
             simulation_type="reference_docs",
-            use_real_llm=True
+            use_real_llm=use_real_llm
         )
 
         agent = FounderSimulationAgent()
@@ -461,6 +467,99 @@ def run_qa_upload_background(job_id: str, company_name: str, temp_file_path: str
                 pass
 
 
+def run_memo_generation_background(job_id: str, company_name: str, agent_weights: dict):
+    """
+    Background task to generate final investment memo.
+    Uses weighted analysis from selected agents and founder Q&A responses.
+    """
+    start_time = time.time()
+
+    try:
+        # Update: Starting memo generation
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Starting final memo generation..."
+        )
+
+        # Sanitize company name for directory consistency
+        sanitized_company_name = OutputManager.sanitize_company_name(company_name)
+        company_dir = f"outputs/{sanitized_company_name}"
+
+        # Check prerequisites
+        if not os.path.exists(company_dir):
+            raise Exception(f"Company directory not found: {company_dir}")
+
+        qa_responses_path = os.path.join(company_dir, "founders-qa-responses.md")
+        if not os.path.exists(qa_responses_path):
+            raise Exception("Founder Q&A responses not found. Please complete Phase 4 first.")
+
+        # Initialize final memo processor
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Initializing memo processor..."
+        )
+
+        from src.processors.final_memo_processor import create_final_memo_processor
+
+        processor = create_final_memo_processor()
+
+        # Check prerequisites
+        prerequisites_met, issues = processor.check_prerequisites(company_dir)
+        if not prerequisites_met:
+            raise Exception(f"Prerequisites not met: {'; '.join(issues)}")
+
+        # Update: Generating memo
+        job_manager.update_status(
+            job_id,
+            JobStatus.PROCESSING,
+            "Generating investment memo with weighted analysis..."
+        )
+
+        # Generate memo
+        result = processor.generate_memo(company_dir, agent_weights)
+
+        if not result.success:
+            raise Exception(result.error_message or "Memo generation failed")
+
+        processing_time = time.time() - start_time
+
+        # Build response
+        memo_result = {
+            "success": True,
+            "memo_file": result.output_file,
+            "pdf_file": result.pdf_file,
+            "processing_time": processing_time,
+            "metadata": {
+                "content_length": len(result.memo_content),
+                "agent_weights_used": agent_weights,
+                "generation_timestamp": result.timestamp.isoformat(),
+                **(result.metadata or {})
+            }
+        }
+
+        # Update: Complete
+        job_manager.update_status(
+            job_id,
+            JobStatus.COMPLETED,
+            "Final investment memo generated successfully!",
+            result=memo_result
+        )
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error generating final memo: {error_details}")
+
+        job_manager.update_status(
+            job_id,
+            JobStatus.FAILED,
+            f"Memo generation failed: {str(e)}",
+            error=str(e)
+        )
+
+
 @router.post("/simulate-qa", response_model=RunAnalysisResponse)
 async def simulate_qa_responses(
     request: SimulateQARequest,
@@ -585,4 +684,76 @@ async def upload_qa_document(
         message="Q&A document upload started. Processing...",
         company_name=company_name,
         selected_agents=[]
+    )
+
+
+@router.post("/generate-memo", response_model=GenerateMemoResponse)
+async def generate_final_memo(
+    request: GenerateMemoRequest,
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """
+    Generate final investment memo with weighted analysis.
+
+    Requires:
+    - Phase 3 (multi-agent analysis) completed
+    - Phase 4 (founder Q&A simulation or upload) completed
+
+    The memo will synthesize findings based on the provided agent weights.
+    """
+
+    # Validate request
+    if not request.company_name or not request.company_name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Company name is required"
+        )
+
+    if not request.agent_weights:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent weights are required"
+        )
+
+    # Check company directory exists
+    sanitized_company_name = OutputManager.sanitize_company_name(request.company_name)
+    company_dir = f"outputs/{sanitized_company_name}"
+
+    if not os.path.exists(company_dir):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Company directory not found. Please complete Phase 1 first."
+        )
+
+    # Check Phase 4 prerequisite (Q&A responses)
+    qa_responses_path = os.path.join(company_dir, "founders-qa-responses.md")
+    if not os.path.exists(qa_responses_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Founder Q&A responses not found. Please complete Phase 4 (Q&A simulation or upload) first."
+        )
+
+    # Check analysis directory exists (Phase 3 prerequisite)
+    analysis_dir = os.path.join(company_dir, "analysis")
+    if not os.path.exists(analysis_dir):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Analysis directory not found. Please complete Phase 3 (multi-agent analysis) first."
+        )
+
+    # Create job
+    job_id = job_manager.create_job()
+
+    # Start background memo generation
+    background_tasks.add_task(
+        run_memo_generation_background,
+        job_id,
+        request.company_name,
+        request.agent_weights
+    )
+
+    return GenerateMemoResponse(
+        job_id=job_id,
+        message="Final memo generation started.",
+        company_name=request.company_name
     )

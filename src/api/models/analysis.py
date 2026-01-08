@@ -2,8 +2,8 @@
 Pydantic models for analysis API endpoints.
 """
 
-from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from pydantic import BaseModel, Field, validator
+from typing import List, Optional, Any, Dict
 
 
 class RunAnalysisRequest(BaseModel):
@@ -49,3 +49,40 @@ class SimulateQARequest(BaseModel):
                 "company_name": "TechVenture AI"
             }
         }
+
+
+class GenerateMemoRequest(BaseModel):
+    """Request model for generating final investment memo"""
+    company_name: str = Field(..., description="Company name")
+    agent_weights: Dict[str, int] = Field(
+        ...,
+        description="Agent weights as key-value pairs (e.g., {'business': 25, 'market': 25, ...})"
+    )
+
+    @validator('agent_weights')
+    def validate_weights(cls, v):
+        """Validate that weights sum to 100"""
+        total = sum(v.values())
+        if total != 100:
+            raise ValueError(f"Agent weights must sum to 100, got {total}")
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "company_name": "TechVenture AI",
+                "agent_weights": {
+                    "business": 25,
+                    "market": 25,
+                    "tech": 25,
+                    "risk": 25
+                }
+            }
+        }
+
+
+class GenerateMemoResponse(BaseModel):
+    """Response model for memo generation job"""
+    job_id: str
+    message: str
+    company_name: str

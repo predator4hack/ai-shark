@@ -59,6 +59,19 @@ export interface SimulationResult {
   error_message?: string | null
 }
 
+export interface MemoResult {
+  success: boolean
+  memo_file: string
+  pdf_file?: string
+  processing_time: number
+  metadata?: {
+    content_length: number
+    agent_weights_used: { [key: string]: number }
+    generation_timestamp: string
+    [key: string]: any
+  }
+}
+
 export interface PhaseResult {
   id: string
   status: 'pending' | 'running' | 'completed' | 'failed'
@@ -67,6 +80,7 @@ export interface PhaseResult {
   error?: string
   questionnaire?: QuestionnaireResult
   simulationResult?: SimulationResult
+  memoResult?: MemoResult
 }
 
 export interface AnalysisDocuments {
@@ -137,4 +151,6 @@ export interface AnalysisState {
   analysisJobId: string | null
   // Phase 4: Founder simulation
   simulationJobId: string | null
+  // Phase 5: Final memo generation
+  memoJobId: string | null
 }

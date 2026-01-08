@@ -26,6 +26,9 @@ import {
     setSimulationJobId,
     setSimulationResult,
     setSimulationError,
+    setMemoJobId,
+    setMemoResult,
+    setMemoError,
 } from "../store/slices/analysisSlice";
 
 // Define all 4 agent cards - always shown regardless of availability
@@ -91,12 +94,14 @@ export const AnalysisPage: React.FC = () => {
         selectedAgents,
         analysisJobId,
         simulationJobId,
+        memoJobId,
     } = useAppSelector((state) => state.analysis);
 
     const [sliderValues, setSliderValues] = useState(agentWeights);
     const [uploadPolling, setUploadPolling] = useState(false);
     const [analysisPolling, setAnalysisPolling] = useState(false);
     const [simulationPolling, setSimulationPolling] = useState(false);
+    const [memoPolling, setMemoPolling] = useState(false);
     const [showQuestionnaireError, setShowQuestionnaireError] = useState(false);
     const [showQuestionnairePreview, setShowQuestionnairePreview] =
         useState(false);
@@ -268,13 +273,55 @@ export const AnalysisPage: React.FC = () => {
                 }
             } catch (error: any) {
                 console.error("Simulation polling error:", error);
-                dispatch(setSimulationError("Failed to fetch simulation status"));
+                dispatch(
+                    setSimulationError("Failed to fetch simulation status")
+                );
                 setSimulationPolling(false);
             }
         }, POLLING.INTERVAL_MS);
 
         return () => clearInterval(pollInterval);
     }, [simulationPolling, simulationJobId, dispatch]);
+
+    // Poll memo generation job status
+    useEffect(() => {
+        if (!memoPolling || !memoJobId) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const status = await documentsApi.getJobStatus(memoJobId);
+
+                dispatch(
+                    updatePhaseStatus({
+                        phaseId: "phase5",
+                        status: status.status as any,
+                        progressMessage: status.progress_message,
+                    })
+                );
+
+                if (status.status === "completed" && status.result) {
+                    dispatch(setMemoResult(status.result));
+                    setMemoPolling(false);
+                } else if (status.status === "failed") {
+                    dispatch(
+                        setMemoError(status.error || "Memo generation failed")
+                    );
+                    setMemoPolling(false);
+                }
+            } catch (error: any) {
+                console.error("Memo polling error:", error);
+                dispatch(setMemoError("Failed to fetch memo generation status"));
+                setMemoPolling(false);
+            }
+        }, POLLING.INTERVAL_MS);
+
+        return () => clearInterval(pollInterval);
+    }, [memoPolling, memoJobId, dispatch]);
+
+    // Sync local slider state with Redux when templates are applied
+    useEffect(() => {
+        setSliderValues(agentWeights);
+    }, [agentWeights]);
 
     // Handle reset
     const handleResetUpload = () => {
@@ -331,37 +378,49 @@ export const AnalysisPage: React.FC = () => {
         }
 
         try {
-            const response = await simulationApi.uploadDirectQA(file, companyName);
+            const response = await simulationApi.uploadDirectQA(
+                file,
+                companyName
+            );
             dispatch(setSimulationJobId(response.job_id));
             setSimulationPolling(true);
         } catch (error: any) {
             dispatch(
                 setSimulationError(
-                    error.response?.data?.detail || "Failed to upload Q&A document"
+                    error.response?.data?.detail ||
+                        "Failed to upload Q&A document"
                 )
             );
         }
     };
 
-    const handleGenerateMemo = () => {
-        // TODO: Connect to backend - POST /api/analysis/generate-memo
-        dispatch(
-            updatePhaseStatus({
-                phaseId: "phase5",
-                status: "running",
-                progressMessage: "Generating investment memo...",
-            })
-        );
-        setTimeout(() => {
+    const handleGenerateMemo = async () => {
+        if (!companyName) {
+            dispatch(setMemoError("Company name is required"));
+            return;
+        }
+
+        // Convert agentWeights to simple key-value pairs
+        const weights: { [key: string]: number } = {};
+        Object.entries(sliderValues).forEach(([key, config]) => {
+            weights[key] = config.weight;
+        });
+
+        try {
+            const response = await analysisApi.generateMemo({
+                company_name: companyName,
+                agent_weights: weights,
+            });
+
+            dispatch(setMemoJobId(response.job_id));
+            setMemoPolling(true);
+        } catch (error: any) {
             dispatch(
-                updatePhaseStatus({
-                    phaseId: "phase5",
-                    status: "completed",
-                    progressMessage: "Memo generated",
-                    result: {},
-                })
+                setMemoError(
+                    error.response?.data?.detail || "Failed to start memo generation"
+                )
             );
-        }, 4000);
+        }
     };
 
     const handleWeightChange = (
@@ -1387,7 +1446,12 @@ export const AnalysisPage: React.FC = () => {
                                                             AI Simulation Mode
                                                         </h4>
                                                         <p className="text-[11px] leading-relaxed text-blue-700/80 mt-1">
-                                                            The system will use the questionnaire from Phase 3 and analysis reports to generate contextual Q&A responses.
+                                                            The system will use
+                                                            the questionnaire
+                                                            from Phase 3 and
+                                                            analysis reports to
+                                                            generate contextual
+                                                            Q&A responses.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1400,7 +1464,8 @@ export const AnalysisPage: React.FC = () => {
                                                         phases.phase3.status !==
                                                             "completed" ||
                                                         !isQuestionnaireAvailable(
-                                                            phases.phase3.questionnaire
+                                                            phases.phase3
+                                                                .questionnaire
                                                         ) ||
                                                         phases.phase4.status ===
                                                             "running" ||
@@ -1408,16 +1473,17 @@ export const AnalysisPage: React.FC = () => {
                                                     }
                                                     className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
-                                                    {(phases.phase4.status ===
+                                                    {phases.phase4.status ===
                                                         "running" ||
-                                                        simulationJobId !== null) ? (
+                                                    simulationJobId !== null ? (
                                                         <>
                                                             <Icon
                                                                 icon="lucide:loader-2"
                                                                 width={12}
                                                                 className="animate-spin"
                                                             />
-                                                            Generating Responses...
+                                                            Generating
+                                                            Responses...
                                                         </>
                                                     ) : (
                                                         <>
@@ -1425,7 +1491,9 @@ export const AnalysisPage: React.FC = () => {
                                                                 icon="lucide:sparkles"
                                                                 width={12}
                                                             />
-                                                            Simulate Questionnaire Response
+                                                            Simulate
+                                                            Questionnaire
+                                                            Response
                                                         </>
                                                     )}
                                                 </button>
@@ -1446,37 +1514,51 @@ export const AnalysisPage: React.FC = () => {
                                                             Direct Upload Mode
                                                         </h4>
                                                         <p className="text-[11px] leading-relaxed text-purple-700/80 mt-1">
-                                                            Upload your pre-answered Q&A document (MD, PDF, or DOCX format).
+                                                            Upload your
+                                                            pre-answered Q&A
+                                                            document (MD, PDF,
+                                                            or DOCX format).
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <DragDropZone
-                                                onFileSelect={handleDirectQAUpload}
+                                                onFileSelect={
+                                                    handleDirectQAUpload
+                                                }
                                                 accept={{
-                                                    'text/markdown': ['.md'],
-                                                    'application/pdf': ['.pdf'],
-                                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                                                    'text/plain': ['.txt']
+                                                    "text/markdown": [".md"],
+                                                    "application/pdf": [".pdf"],
+                                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                                                        [".docx"],
+                                                    "text/plain": [".txt"],
                                                 }}
                                                 maxSize={10 * 1024 * 1024}
                                                 disabled={
-                                                    phases.phase3.status !== "completed" ||
-                                                    !isQuestionnaireAvailable(phases.phase3.questionnaire) ||
-                                                    phases.phase4.status === "running" ||
+                                                    phases.phase3.status !==
+                                                        "completed" ||
+                                                    !isQuestionnaireAvailable(
+                                                        phases.phase3
+                                                            .questionnaire
+                                                    ) ||
+                                                    phases.phase4.status ===
+                                                        "running" ||
                                                     simulationJobId !== null
                                                 }
                                             />
 
-                                            {(phases.phase4.status === "running" || simulationJobId !== null) && (
+                                            {(phases.phase4.status ===
+                                                "running" ||
+                                                simulationJobId !== null) && (
                                                 <div className="mt-4 flex items-center gap-2 text-xs text-slate-600">
                                                     <Icon
                                                         icon="lucide:loader-2"
                                                         width={14}
                                                         className="animate-spin"
                                                     />
-                                                    Processing uploaded Q&A document...
+                                                    Processing uploaded Q&A
+                                                    document...
                                                 </div>
                                             )}
                                         </>
@@ -1493,7 +1575,10 @@ export const AnalysisPage: React.FC = () => {
                                                 </div>
                                                 <div className="flex-1">
                                                     <h4 className="text-sm font-semibold text-red-900">
-                                                        {simulationMode === "context" ? "Simulation Failed" : "Upload Processing Failed"}
+                                                        {simulationMode ===
+                                                        "context"
+                                                            ? "Simulation Failed"
+                                                            : "Upload Processing Failed"}
                                                     </h4>
                                                     <p className="text-xs text-red-700 mt-1">
                                                         {phases.phase4.error ||
@@ -1502,7 +1587,10 @@ export const AnalysisPage: React.FC = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => {
-                                                        if (simulationMode === "context") {
+                                                        if (
+                                                            simulationMode ===
+                                                            "context"
+                                                        ) {
                                                             handleSimulateQA();
                                                         }
                                                     }}
@@ -1514,46 +1602,67 @@ export const AnalysisPage: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {phases.phase4.status === "completed" && phases.phase4.simulationResult && (
-                                        <div className="mt-6 pt-6 border-t border-slate-100">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <h4 className="text-xs font-semibold text-slate-900">
-                                                    Q&A Responses Generated
-                                                </h4>
-                                                <span className="text-[10px] text-green-600 flex items-center gap-1">
-                                                    <Icon icon="lucide:check-circle-2" width={12} />
-                                                    Complete
-                                                </span>
-                                            </div>
-                                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
+                                    {phases.phase4.status === "completed" &&
+                                        phases.phase4.simulationResult && (
+                                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h4 className="text-xs font-semibold text-slate-900">
+                                                        Q&A Responses Generated
+                                                    </h4>
+                                                    <span className="text-[10px] text-green-600 flex items-center gap-1">
                                                         <Icon
-                                                            icon="lucide:file-text"
-                                                            width={20}
-                                                            className="text-slate-400"
+                                                            icon="lucide:check-circle-2"
+                                                            width={12}
                                                         />
-                                                        <div>
-                                                            <p className="text-xs font-medium text-slate-900">
-                                                                founders-qa-responses.md
-                                                            </p>
-                                                            <p className="text-[10px] text-slate-500">
-                                                                Generated via {phases.phase4.simulationResult.metadata?.mode === 'ai_simulation' ? 'AI Simulation' : 'Direct Upload'}
-                                                            </p>
+                                                        Complete
+                                                    </span>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <Icon
+                                                                icon="lucide:file-text"
+                                                                width={20}
+                                                                className="text-slate-400"
+                                                            />
+                                                            <div>
+                                                                <p className="text-xs font-medium text-slate-900">
+                                                                    founders-qa-responses.md
+                                                                </p>
+                                                                <p className="text-[10px] text-slate-500">
+                                                                    Generated
+                                                                    via{" "}
+                                                                    {phases
+                                                                        .phase4
+                                                                        .simulationResult
+                                                                        .metadata
+                                                                        ?.mode ===
+                                                                    "ai_simulation"
+                                                                        ? "AI Simulation"
+                                                                        : "Direct Upload"}
+                                                                </p>
+                                                            </div>
                                                         </div>
+                                                        <a
+                                                            href={`/api/v1/files/download?path=${encodeURIComponent(
+                                                                phases.phase4
+                                                                    .simulationResult
+                                                                    .qa_file ||
+                                                                    ""
+                                                            )}`}
+                                                            download
+                                                            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                                        >
+                                                            <Icon
+                                                                icon="lucide:download"
+                                                                width={12}
+                                                            />
+                                                            Download
+                                                        </a>
                                                     </div>
-                                                    <a
-                                                        href={`/api/v1/files/download?path=${encodeURIComponent(phases.phase4.simulationResult.qa_file || '')}`}
-                                                        download
-                                                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
-                                                    >
-                                                        <Icon icon="lucide:download" width={12} />
-                                                        Download
-                                                    </a>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
                                 </div>
                             </div>
                         </div>
@@ -1586,7 +1695,9 @@ export const AnalysisPage: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {phases.phase4.status === "completed" && phases.phase4.simulationResult?.qa_file ? (
+                                        {phases.phase4.status === "completed" &&
+                                        phases.phase4.simulationResult
+                                            ?.qa_file ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-slate-400">
                                                     Ready to Generate
@@ -1597,7 +1708,8 @@ export const AnalysisPage: React.FC = () => {
                                                     width={14}
                                                 />
                                             </>
-                                        ) : phases.phase4.status === "running" ? (
+                                        ) : phases.phase4.status ===
+                                          "running" ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-orange-500">
                                                     Waiting for Simulation
@@ -1608,7 +1720,8 @@ export const AnalysisPage: React.FC = () => {
                                                     width={14}
                                                 />
                                             </>
-                                        ) : phases.phase4.status === "failed" ? (
+                                        ) : phases.phase4.status ===
+                                          "failed" ? (
                                             <>
                                                 <span className="text-[10px] font-medium text-red-500">
                                                     Simulation Failed
@@ -1656,7 +1769,7 @@ export const AnalysisPage: React.FC = () => {
                                                         : "bg-slate-300"
                                                 }`}
                                             ></div>
-                                            Founder Simulation
+                                            Questionnaire Response Simulation
                                         </div>
                                     </div>
 
@@ -1867,7 +1980,8 @@ export const AnalysisPage: React.FC = () => {
                                                     "completed" ||
                                                 phases.phase4.status !==
                                                     "completed" ||
-                                                !phases.phase4.simulationResult?.qa_file ||
+                                                !phases.phase4.simulationResult
+                                                    ?.qa_file ||
                                                 getTotalWeight() !== 100 ||
                                                 phases.phase5.status ===
                                                     "running"
@@ -1895,6 +2009,113 @@ export const AnalysisPage: React.FC = () => {
                                             )}
                                         </button>
                                     </div>
+
+                                    {/* Memo Generation Success State */}
+                                    {phases.phase5.status === "completed" &&
+                                        phases.phase5.memoResult && (
+                                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h4 className="text-xs font-semibold text-slate-900">
+                                                        Investment Memo Generated
+                                                    </h4>
+                                                    <span className="text-[10px] text-green-600 flex items-center gap-1">
+                                                        <Icon
+                                                            icon="lucide:check-circle-2"
+                                                            width={12}
+                                                        />
+                                                        Complete
+                                                    </span>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <Icon
+                                                                icon="lucide:file-text"
+                                                                width={20}
+                                                                className="text-slate-400"
+                                                            />
+                                                            <div>
+                                                                <p className="text-xs font-medium text-slate-900">
+                                                                    investment-memo.md
+                                                                </p>
+                                                                <p className="text-[10px] text-slate-500">
+                                                                    {phases.phase5.memoResult
+                                                                        .metadata?.content_length
+                                                                        ? `${(
+                                                                              phases.phase5
+                                                                                  .memoResult.metadata
+                                                                                  .content_length / 1024
+                                                                          ).toFixed(1)} KB`
+                                                                        : "Markdown format"}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <a
+                                                                href={`/api/v1/files/download?path=${encodeURIComponent(
+                                                                    phases.phase5.memoResult
+                                                                        .memo_file || ""
+                                                                )}`}
+                                                                download
+                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                                            >
+                                                                <Icon
+                                                                    icon="lucide:download"
+                                                                    width={12}
+                                                                />
+                                                                Markdown
+                                                            </a>
+                                                            {phases.phase5.memoResult.pdf_file && (
+                                                                <a
+                                                                    href={`/api/v1/files/download?path=${encodeURIComponent(
+                                                                        phases.phase5.memoResult
+                                                                            .pdf_file
+                                                                    )}`}
+                                                                    download
+                                                                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <Icon
+                                                                        icon="lucide:file-text"
+                                                                        width={12}
+                                                                    />
+                                                                    PDF
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    {/* Memo Generation Failed State */}
+                                    {phases.phase5.status === "failed" && (
+                                        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex gap-3">
+                                                <div className="mt-0.5 text-red-500">
+                                                    <Icon
+                                                        icon="lucide:alert-circle"
+                                                        width={18}
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-semibold text-red-900">
+                                                        Memo Generation Failed
+                                                    </h4>
+                                                    <p className="text-xs text-red-700 mt-1">
+                                                        {phases.phase5.error ||
+                                                            "An error occurred during memo generation"}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={handleGenerateMemo}
+                                                    disabled={getTotalWeight() !== 100}
+                                                    className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Retry
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

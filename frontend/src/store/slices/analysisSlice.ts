@@ -55,6 +55,8 @@ const initialState: AnalysisState = {
   analysisJobId: null,
   // Phase 4: Founder simulation
   simulationJobId: null,
+  // Phase 5: Final memo generation
+  memoJobId: null,
 }
 
 const analysisSlice = createSlice({
@@ -107,27 +109,30 @@ const analysisSlice = createSlice({
       const template = action.payload
       switch (template) {
         case 'balanced':
+          // Equal distribution: 25% each
           state.agentWeights = {
-            business: { weight: 30, enabled: true },
-            market: { weight: 40, enabled: true },
-            tech: { weight: 20, enabled: true },
-            risk: { weight: 10, enabled: true },
+            business: { weight: 25, enabled: true },
+            market: { weight: 25, enabled: true },
+            tech: { weight: 25, enabled: true },
+            risk: { weight: 25, enabled: true },
           }
           break
         case 'tech-focused':
+          // Tech 50%, others ~17% each (50 + 17 + 17 + 16 = 100)
           state.agentWeights = {
-            business: { weight: 20, enabled: true },
-            market: { weight: 20, enabled: true },
+            business: { weight: 17, enabled: true },
+            market: { weight: 17, enabled: true },
             tech: { weight: 50, enabled: true },
-            risk: { weight: 10, enabled: true },
+            risk: { weight: 16, enabled: true },
           }
           break
         case 'market-focused':
+          // Market 50%, others ~17% each (50 + 17 + 17 + 16 = 100)
           state.agentWeights = {
-            business: { weight: 20, enabled: true },
+            business: { weight: 17, enabled: true },
             market: { weight: 50, enabled: true },
-            tech: { weight: 20, enabled: true },
-            risk: { weight: 10, enabled: true },
+            tech: { weight: 17, enabled: true },
+            risk: { weight: 16, enabled: true },
           }
           break
       }
@@ -300,6 +305,30 @@ const analysisSlice = createSlice({
       state.phases.phase4.error = action.payload
       state.simulationJobId = null
     },
+    // Phase 5: Final memo generation actions
+    setMemoJobId: (state, action: PayloadAction<string>) => {
+      state.memoJobId = action.payload
+      state.phases.phase5.status = 'running'
+      state.phases.phase5.progressMessage = 'Generating final investment memo...'
+    },
+    setMemoResult: (state, action: PayloadAction<any>) => {
+      state.phases.phase5.memoResult = action.payload
+
+      if (action.payload.success && action.payload.memo_file) {
+        state.phases.phase5.status = 'completed'
+        state.phases.phase5.progressMessage = 'Final memo generated successfully!'
+      } else {
+        state.phases.phase5.status = 'failed'
+        state.phases.phase5.error = action.payload.error_message || 'Memo generation failed'
+      }
+
+      state.memoJobId = null
+    },
+    setMemoError: (state, action: PayloadAction<string>) => {
+      state.phases.phase5.status = 'failed'
+      state.phases.phase5.error = action.payload
+      state.memoJobId = null
+    },
     reset: () => {
       return initialState
     },
@@ -333,6 +362,9 @@ export const {
   setSimulationJobId,
   setSimulationResult,
   setSimulationError,
+  setMemoJobId,
+  setMemoResult,
+  setMemoError,
   reset,
 } = analysisSlice.actions
 

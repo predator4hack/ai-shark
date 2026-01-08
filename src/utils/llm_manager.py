@@ -360,33 +360,85 @@ class LLMManager:
             "rate_limit_interval": self.min_request_interval,
             "api_configured": bool(os.getenv("GOOGLE_API_KEY"))
         }
-    
+
+    def _get_mock_founder_responses(self) -> str:
+        """
+        Return mock founder responses for testing without hitting API rate limits
+        """
+        return """**Sarah Chen (CEO)**
+
+*Q1: What problem are you solving?*
+We're solving the data analytics gap for SMBs. 70% of small businesses have valuable data but lack the tools or expertise to analyze it. Traditional BI tools like Tableau cost $70/user/month and require data scientists. We make analytics accessible through natural language - any employee can ask questions in plain English and get instant insights.
+
+*Q2: Why is your team uniquely positioned to solve this?*
+I spent 10 years at Google leading Product Management for Google Analytics, working directly with SMB customers. Our CTO Alex built AI infrastructure at OpenAI for 5 years. Our Head of Data came from Segment where she processed analytics for 10,000+ SMB customers. We've seen this problem from every angle - product, technology, and scale.
+
+*Q3: What's your go-to-market strategy?*
+We're going PLG (Product-Led Growth) with a freemium model. Free tier gets 100 queries/month, enough to show value. Premium is $49/user/month - 30% cheaper than Tableau. We target accounting firms, marketing agencies, and e-commerce stores first since they're data-rich but resource-constrained. Our first 500 users came through Product Hunt and G2 reviews with zero paid marketing.
+
+**Alex Rodriguez (CTO)**
+
+*Q1: What's your technical moat?*
+We've built a proprietary SQL generation engine that converts natural language to database queries with 95% accuracy - better than competitors at 75-80%. We use fine-tuned LLMs on 2M+ real business queries we collected. Plus, our semantic caching layer reduces API costs by 60% while maintaining sub-second response times. This gives us 40% better margins than competitors.
+
+*Q2: How do you handle data security and privacy?*
+Security is foundational. We're SOC 2 Type II compliant, all data encrypted at rest (AES-256) and in transit (TLS 1.3). We never train our models on customer data - it's in our terms of service. For enterprises, we offer on-premise deployment. Our architecture keeps customer data in their own database - we only read, never write or store PII.
+
+*Q3: What are your biggest technical challenges?*
+Scale and accuracy. We need to handle 100+ data source integrations (SQL, Snowflake, BigQuery, MongoDB, etc.) with different query syntaxes. Each new connector takes 2-3 weeks. We're also constantly improving our NLP model - edge cases where users ask ambiguous questions. We've built a feedback loop where users can correct wrong queries, which trains our model in real-time.
+
+**Jennifer Wu (Head of Data/Growth)**
+
+*Q1: What does your customer acquisition look like?*
+We're spending $50K/month across Google Ads and content marketing. CAC is $800 with an average LTV of $4,200 (7 year lifetime), giving us 5.25x LTV:CAC. 40% of signups convert to paid within 30 days. Our viral coefficient is 1.3 - each user invites 1.3 colleagues on average. Retention is strong: 92% monthly, 75% annually.
+
+*Q2: Who are your competitors and how do you differentiate?*
+Direct competitors are Mode Analytics, Thoughtspot, and Sisense. We're 50% cheaper and 10x easier to use. Tableau/Power BI are indirect competitors - powerful but need data science teams. Our biggest differentiator is speed to value: customers get insights in 5 minutes vs 5 weeks with traditional BI tools. We win on ease of use, not features.
+
+*Q3: What metrics matter most right now?*
+MRR growth (currently $120K, growing 40% month-over-month), Net Revenue Retention (115% - customers expand usage over time), and activation rate (% of signups that run 10+ queries in first week - currently 62%). We also track query accuracy since that drives retention. Bad answers = churn.
+
+---
+
+**Key Themes Across Responses:**
+- Strong technical foundation with proprietary IP (SQL generation engine)
+- Experienced team with direct domain expertise (Google, OpenAI, Segment)
+- Clear product-market fit with paying customers and strong unit economics
+- Focus on underserved SMB market with PLG motion
+- Security and compliance built in from day one
+- Data-driven approach to growth with healthy metrics"""
+
     @retry_with_backoff()
     def generate_founder_responses(self, prompt: str) -> str:
         """
         Generate founder responses for questionnaire simulation
-        
+
         Args:
             prompt: Formatted prompt for founder response simulation
-            
+
         Returns:
             Generated response string
         """
+        # Mock mode: return simulated founder responses
+        if self.use_mock:
+            logger.info("🔧 Mock mode: Returning simulated founder responses")
+            return self._get_mock_founder_responses()
+
         try:
             logger.info("Generating founder responses using Gemini...")
-            
+
             # Rate limiting
             self._enforce_rate_limit()
-            
+
             model = genai.GenerativeModel(self.gemini_model)
             response = model.generate_content(prompt)
-            
+
             if not response or not response.text:
                 raise LLMConnectionError("Empty response from Gemini API")
-            
+
             logger.info("Successfully generated founder responses")
             return response.text.strip()
-            
+
         except Exception as e:
             logger.error(f"Error generating founder responses: {e}")
             raise LLMConnectionError(f"Failed to generate founder responses: {e}")
