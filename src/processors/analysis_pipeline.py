@@ -32,9 +32,10 @@ from typing import List, Dict, Any, Optional, Callable
 
 # Import AI-Shark components
 from ..utils.document_loader import DirectoryLoader, MarkdownParser
+from ..utils.output_manager import OutputManager
 from ..agents.base_agent import BaseAnalysisAgent
 from ..agents import *  # Import all agents
-from ..utils.llm_setup import get_llm, create_mock_llm, llm_setup
+from ..utils.llm_setup import get_llm, create_mock_llm, get_llm_setup
 from ..models.document_models import StartupDocument, DocumentMetadata, ParsedContent
 from ..models.analysis_models import BusinessAnalysis, MarketAnalysis
 from config.settings import settings
@@ -50,9 +51,12 @@ class AnalysisPipeline:
 
         Args:
             company_dir: Path to the company's output directory (e.g., "outputs/company-name")
-            use_real_llm: Whether to use real LLM API (defaults to True for production)
+            use_real_llm: Whether to use real LLM API (can be overridden by USE_MOCK_LLM env var)
         """
-        self.use_real_llm = use_real_llm
+        # Environment variable takes precedence
+        mock_from_env = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+        self.use_real_llm = use_real_llm and not mock_from_env
+
         self.company_dir = Path(company_dir)
         self.analysis_dir = self.company_dir / "analysis"
         self.analysis_dir.mkdir(exist_ok=True)
@@ -67,7 +71,7 @@ class AnalysisPipeline:
         
         print(f"🤖 LLM Mode: {'Real API' if use_real_llm else 'Mock/Demo'}")
         if use_real_llm:
-            print(f"🤖 Using real LLM: {llm_setup.get_model_info()}")
+            print(f"🤖 Using real LLM: {get_llm_setup().get_model_info()}")
         else:
             print("🤖 Using Mock LLM for demonstration")
         
@@ -385,7 +389,126 @@ class AnalysisPipeline:
         print("=" * 40)
         print(f"✅ Successful: {len(successful_analyses)} agents")
         print(f"❌ Failed: {len(failed_analyses)} agents")
-        
+
+        return all_results
+
+    def run_selected_agents(self, agent_types: List[str]) -> Dict[str, Any]:
+        """
+        Run analysis using only specified agents
+
+        Args:
+            agent_types: List of agent type identifiers (e.g., ['business', 'market'])
+
+        Returns:
+            Dictionary with results from selected agents, keyed by agent name
+
+        Raises:
+            ValueError: If no valid agents are selected or pitch deck is missing
+        """
+        print(f"\n🧠 Selected Multi-Agent Analysis Pipeline")
+        print("=" * 60)
+        print(f"📋 Selected agents: {', '.join(agent_types)}")
+
+        # Validate that selected agents are available
+        available_agent_types = list(self.agents.keys())
+        invalid_agents = [a for a in agent_types if a not in available_agent_types]
+
+        if invalid_agents:
+            print(f"⚠️ Warning: Unavailable agents requested: {', '.join(invalid_agents)}")
+
+        # Filter to only valid selected agents
+        valid_selected_agents = [a for a in agent_types if a in available_agent_types]
+
+        if not valid_selected_agents:
+            raise ValueError(f"No valid agents selected. Available: {', '.join(available_agent_types)}")
+
+        print(f"✅ Running with {len(valid_selected_agents)} valid agents: {', '.join(valid_selected_agents)}")
+
+        # Load all documents
+        documents = self.load_documents()
+        additional_content = self.load_additional_documents()
+
+        # Extract document contents
+        pitch_deck_content = ""
+        public_data_content = ""
+
+        for doc in documents:
+            if doc.document_type == "pitch_deck":
+                pitch_deck_content = doc.content.raw_text
+                print(f"📄 Pitch deck loaded: {len(pitch_deck_content)} characters")
+            elif doc.document_type == "market_analysis":
+                public_data_content = doc.content.raw_text
+                print(f"🌐 Public data loaded: {len(public_data_content)} characters")
+
+        # Handle missing public data (pass empty string as per requirements)
+        if not public_data_content:
+            public_data_content = ""
+            print("⚠️ No public data found, using empty content")
+
+        # Handle additional documents
+        if not additional_content:
+            additional_content = ""
+            print("📄 No additional documents found")
+        else:
+            print(f"📄 Additional docs loaded: {len(additional_content)} characters")
+
+        # Check minimum requirements
+        if not pitch_deck_content:
+            raise ValueError("Pitch deck content is required for analysis")
+
+        all_results = {}
+
+        # Run analysis only with selected agents
+        for agent_type in valid_selected_agents:
+            agent = self.agents[agent_type]
+            try:
+                print(f"\n🤖 Running {agent_type} analysis...")
+                print("-" * 40)
+                print(f"   Agent: {agent.agent_name}")
+
+                start_time = datetime.now()
+
+                # Combine public data and additional content for analysis
+                combined_public_content = public_data_content
+                if additional_content:
+                    combined_public_content += "\n\n" + additional_content
+
+                # Run combined analysis
+                markdown_analysis = agent.analyze_combined_documents(
+                    pitch_deck_content=pitch_deck_content,
+                    public_data_content=combined_public_content
+                )
+
+                processing_time = datetime.now() - start_time
+
+                # Store results
+                all_results[agent_type] = {
+                    "agent_name": agent.agent_name,
+                    "markdown_analysis": markdown_analysis,
+                    "processing_time": processing_time.total_seconds(),
+                    "analysis_type": f"{agent_type}_analysis"
+                }
+
+                print(f"   ✅ {agent_type} analysis completed in {processing_time.total_seconds():.2f}s")
+                print(f"   📝 Generated report: {len(markdown_analysis)} characters")
+
+            except Exception as e:
+                print(f"   ❌ {agent_type} analysis failed: {e}")
+                all_results[agent_type] = {
+                    "agent_name": agent.agent_name,
+                    "error": str(e),
+                    "status": "failed"
+                }
+                continue
+
+        successful_analyses = [r for r in all_results.values() if "error" not in r]
+        failed_analyses = [r for r in all_results.values() if "error" in r]
+
+        print(f"\n📊 Selected Multi-Agent Analysis Summary")
+        print("=" * 40)
+        print(f"✅ Successful: {len(successful_analyses)} agents")
+        print(f"❌ Failed: {len(failed_analyses)} agents")
+
         return all_results
 
     def generate_agent_specific_reports(self, all_results: Dict[str, Any]) -> None:
@@ -720,11 +843,10 @@ For the complete analysis, please refer to the main report file.
             matches = re.findall(pattern, pitch_content, re.MULTILINE)
             if matches:
                 company_name = matches[0].strip()
-                # Clean up the name
-                company_name = re.sub(r'[^\w\s-]', '', company_name)  # Remove special chars
-                company_name = re.sub(r'\s+', '-', company_name.strip())  # Replace spaces with hyphens
-                if len(company_name) > 2 and len(company_name) < 30:  # Reasonable length
-                    return company_name.lower()
+                # Use OutputManager for consistent sanitization (underscores, not hyphens)
+                sanitized = OutputManager.sanitize_company_name(company_name)
+                if len(sanitized) > 2 and len(sanitized) < 30:  # Reasonable length
+                    return sanitized
 
         return None
 
@@ -739,7 +861,7 @@ For the complete analysis, please refer to the main report file.
         print("=" * 60)
         print(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         if self.use_real_llm:
-            print(f"LLM Provider: {llm_setup.get_model_info().get('provider', 'unknown')}")
+            print(f"LLM Provider: {get_llm_setup().get_model_info().get('provider', 'unknown')}")
         print(f"Use Real LLM: {self.use_real_llm}")
         print(f"Analysis Type: Multi-Agent Analysis (All Available Agents)")
         print(f"Company Directory: {self.company_dir}")

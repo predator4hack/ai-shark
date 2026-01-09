@@ -1,21 +1,20 @@
-import React from 'react'
-import { Alert, AlertTitle } from '@mui/material'
+import React from 'react';
+import { Alert } from '../ui/Alert';
 
 interface ErrorAlertProps {
-  title?: string
-  message: string
-  onClose?: () => void
+  title?: string;
+  message: string;
+  onClose?: () => void;
 }
 
 export const ErrorAlert: React.FC<ErrorAlertProps> = ({
   title = 'Error',
   message,
-  onClose
+  onClose,
 }) => {
   return (
-    <Alert severity="error" onClose={onClose}>
-      <AlertTitle>{title}</AlertTitle>
+    <Alert type="error" title={title} onClose={onClose}>
       {message}
     </Alert>
-  )
-}
+  );
+};

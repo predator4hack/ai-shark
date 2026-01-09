@@ -17,68 +17,110 @@ The platform transforms what traditionally takes VC analysts 15-30 hours of manu
 ### 🚀 Multi-Phase Analysis Pipeline
 
 1. **Phase 1: Pitch Deck Processing**
-   - Uploads and processes pitch decks (PDF/PPT/PPTX)
-   - Extracts company metadata, table of contents, and structured content
-   - Converts presentations to images for AI analysis
-   - Generates structured markdown summaries
+
+    - Uploads and processes pitch decks (PDF/PPT/PPTX)
+    - Extracts company metadata, table of contents, and structured content
+    - Converts presentations to images for AI analysis
+    - Generates structured markdown summaries
 
 2. **Phase 2: Additional Document Processing**
-   - Processes supplementary documents (transcripts, emails, updates)
-   - Enriches company context with additional information sources
-   - Maintains document relationships and references
+
+    - Processes supplementary documents (transcripts, emails, updates)
+    - Enriches company context with additional information sources
+    - Maintains document relationships and references
 
 3. **Phase 3: Multi-Agent AI Analysis**
-   - **Business Agent**: Evaluates business model, revenue streams, and scalability
-   - **Market Agent**: Analyzes TAM/SAM, competitive landscape, and market trends
-   - **Technical Agent**: Assesses technology stack, IP, and technical feasibility
-   - **Risk Agent**: Identifies market, execution, financial, and regulatory risks
-   - Parallel execution for efficient processing
+
+    - **Business Agent**: Evaluates business model, revenue streams, and scalability
+    - **Market Agent**: Analyzes TAM/SAM, competitive landscape, and market trends
+    - **Technical Agent**: Assesses technology stack, IP, and technical feasibility
+    - **Risk Agent**: Identifies market, execution, financial, and regulatory risks
+    - Parallel execution for efficient processing
 
 4. **Phase 4: Founder Response Simulation**
-   - Simulates founder responses to investment questionnaires
-   - Two modes: Reference-based (using uploaded docs) or Direct Q&A
-   - Generates realistic, contextual responses based on company data
+
+    - Simulates founder responses to investment questionnaires
+    - Two modes: Reference-based (using uploaded docs) or Direct Q&A
+    - Generates realistic, contextual responses based on company data
 
 5. **Phase 5: Investment Memo Generation**
-   - Synthesizes all analysis into a comprehensive investment memo
-   - Configurable agent weight templates (Balanced, Market-Focused, Tech-Focused)
-   - Exports to Markdown, DOCX, and PDF formats
-   - Weighted scoring based on user-defined priorities
+    - Synthesizes all analysis into a comprehensive investment memo
+    - Configurable agent weight templates (Balanced, Market-Focused, Tech-Focused)
+    - Exports to Markdown, DOCX, and PDF formats
+    - Weighted scoring based on user-defined priorities
 
 ### 🎯 Automation Capabilities
 
-- **80% automation** of initial screening tasks
-- **60% automation** of deep dive analysis
-- **High automation** potential for financial metrics extraction and risk assessment
-- Systematic validation against industry benchmarks
-- Real-time processing with status tracking
+-   **80% automation** of initial screening tasks
+-   **60% automation** of deep dive analysis
+-   **High automation** potential for financial metrics extraction and risk assessment
+-   Systematic validation against industry benchmarks
+-   Real-time processing with status tracking
+
+### 🧪 Mock Mode for Development & Testing
+
+AI-Shark includes a comprehensive **mock mode** that eliminates the need for LLM API calls during development and testing:
+
+**Benefits:**
+- ⚡ **Instant responses** - No waiting for API calls (perfect for frontend development)
+- 💰 **Zero cost** - No API token consumption during testing
+- 🔑 **No API keys needed** - Frontend developers can work without credentials
+- 📊 **Realistic data** - Returns meaningful mock analysis reports with proper structure
+- 🚀 **Full pipeline support** - Works with all endpoints and multi-agent analysis
+
+**How to Enable:**
+```bash
+# In your .env file
+USE_MOCK_LLM=true
+```
+
+**What Gets Skipped:**
+- LLM API calls to Google Gemini / Groq
+- PDF/PPT file processing and conversion
+- Returns pre-defined realistic analysis for "TechVenture AI" startup
+
+**Use Cases:**
+- Frontend development without backend dependencies
+- Continuous integration testing
+- Development without API keys
+- Performance testing without rate limits
+- Demonstrating the platform to stakeholders
+
+See the [Mock Mode Documentation](#mock-mode-development) section below for detailed usage.
 
 ---
+
+## Architecture Diagram
+
+![alt text](assets/image.png)
 
 ## Technology Stack
 
 ### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast builds and HMR
-- **Material-UI (MUI)** for premium UI components
-- **Redux Toolkit** for state management
-- **React Router** for navigation
-- **Axios** for API communication
-- **React Dropzone** for file uploads
+
+-   **React 18** with TypeScript
+-   **Vite** for fast builds and HMR
+-   **Material-UI (MUI)** for premium UI components
+-   **Redux Toolkit** for state management
+-   **React Router** for navigation
+-   **Axios** for API communication
+-   **React Dropzone** for file uploads
 
 ### Backend
-- **FastAPI** (Python 3.11) for REST API
-- **Uvicorn** ASGI server
-- **Pydantic** for data validation
-- **Google Cloud Storage** for file persistence
-- **LangChain** for LLM orchestration
-- **Google Gemini 2.5 Flash** for AI analysis
+
+-   **FastAPI** (Python 3.11) for REST API
+-   **Uvicorn** ASGI server
+-   **Pydantic** for data validation
+-   **Google Cloud Storage** for file persistence
+-   **LangChain** for LLM orchestration
+-   **Google Gemini 2.5 Flash** for AI analysis
 
 ### Infrastructure
-- **Docker** & **Docker Compose** for containerization
-- **Google Cloud Run** for serverless deployment
-- **Google Cloud Storage (GCS)** for production file storage
-- **Multi-stage Docker builds** for optimized production images
+
+-   **Docker** & **Docker Compose** for containerization
+-   **Google Cloud Run** for serverless deployment
+-   **Google Cloud Storage (GCS)** for production file storage
+-   **Multi-stage Docker builds** for optimized production images
 
 ---
 
@@ -127,10 +169,10 @@ The platform transforms what traditionally takes VC analysts 15-30 hours of manu
 
 The platform uses a **hybrid storage approach**:
 
-- **Development**: Local filesystem (`outputs/` directory)
-- **Production**: Google Cloud Storage (GCS) with signed URLs
-- **Automatic detection**: Based on `USE_GCS` environment variable
-- **Seamless switching**: Same API for both storage backends
+-   **Development**: Local filesystem (`outputs/` directory)
+-   **Production**: Google Cloud Storage (GCS) with signed URLs
+-   **Automatic detection**: Based on `USE_GCS` environment variable
+-   **Seamless switching**: Same API for both storage backends
 
 ---
 
@@ -138,11 +180,11 @@ The platform uses a **hybrid storage approach**:
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
-- **Python** 3.11+
-- **Docker** and **Docker Compose** (optional)
-- **Google Cloud SDK** (for production deployment)
-- **Google API Key** for Gemini LLM
+-   **Node.js** 18+ and npm
+-   **Python** 3.11+
+-   **Docker** and **Docker Compose** (optional)
+-   **Google Cloud SDK** (for production deployment)
+-   **Google API Key** for Gemini LLM
 
 ### Installation
 
@@ -202,9 +244,10 @@ npm run dev
 ```
 
 The application will be available at:
-- **React UI**: http://localhost:3000
-- **FastAPI Backend**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+
+-   **React UI**: http://localhost:3000
+-   **FastAPI Backend**: http://localhost:8000
+-   **API Documentation**: http://localhost:8000/docs
 
 ---
 
@@ -219,9 +262,10 @@ docker-compose -f docker-compose.dev.yml up
 ```
 
 This starts:
-- **FastAPI**: http://localhost:8000
-- **React Frontend**: http://localhost:3000
-- **Streamlit UI** (legacy): http://localhost:8501
+
+-   **FastAPI**: http://localhost:8000
+-   **React Frontend**: http://localhost:3000
+-   **Streamlit UI** (legacy): http://localhost:8501
 
 ### Production Build
 
@@ -287,60 +331,14 @@ gcloud run services describe ai-shark --region us-central1 --format='value(statu
 
 ### Phase 2-5: Advanced Analysis
 
-*(Coming soon - currently in development)*
+_(Coming soon - currently in development)_
 
 The platform will support:
-- Adding supplementary documents
-- Running multi-agent AI analysis
-- Simulating founder Q&A
-- Generating weighted investment memos with customizable priorities
 
----
-
-## Project Structure
-
-```
-ai-shark/
-├── frontend/                    # React TypeScript frontend
-│   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   ├── pages/              # Page components
-│   │   ├── store/              # Redux store and slices
-│   │   ├── api/                # API client and endpoints
-│   │   ├── types/              # TypeScript type definitions
-│   │   └── App.tsx             # Root component
-│   ├── public/                 # Static assets
-│   └── package.json
-│
-├── src/                        # Python backend
-│   ├── api/                    # FastAPI application
-│   │   ├── main.py            # FastAPI app entry point
-│   │   ├── config.py          # Configuration management
-│   │   ├── routers/           # API route handlers
-│   │   ├── services/          # Business logic services
-│   │   └── schemas/           # Pydantic models
-│   │
-│   ├── processors/            # Document processors
-│   │   ├── pitch_deck_processor.py
-│   │   ├── analysis_processor.py
-│   │   └── ...
-│   │
-│   └── agents/                # AI analysis agents
-│       ├── business_agent.py
-│       ├── market_agent.py
-│       └── ...
-│
-├── tests/                     # Test suites
-│   ├── api/                   # Backend API tests
-│   └── integration/           # Integration tests
-│
-├── outputs/                   # Local file storage (dev)
-├── specs/                     # Project specifications
-├── docker-compose.dev.yml     # Development Docker setup
-├── Dockerfile.prod            # Production Docker build
-├── pyproject.toml            # Python dependencies
-└── README.md                 # This file
-```
+-   Adding supplementary documents
+-   Running multi-agent AI analysis
+-   Simulating founder Q&A
+-   Generating weighted investment memos with customizable priorities
 
 ---
 
@@ -349,6 +347,7 @@ ai-shark/
 ### Key Endpoints
 
 #### Upload Pitch Deck
+
 ```http
 POST /api/v1/documents/pitch-deck
 Content-Type: multipart/form-data
@@ -361,6 +360,7 @@ Response:
 ```
 
 #### Check Job Status
+
 ```http
 GET /api/v1/jobs/{job_id}/status
 
@@ -379,6 +379,7 @@ Response:
 ```
 
 #### Download File
+
 ```http
 GET /api/v1/files/download/{company_name}/{file_path}
 
@@ -393,15 +394,15 @@ Full interactive API documentation is available at `/docs` when running the back
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `GOOGLE_API_KEY` | Google Gemini API key | - | ✅ |
-| `GEMINI_MODEL` | Gemini model name | `gemini-2.5-flash` | ❌ |
-| `USE_GCS` | Use Google Cloud Storage | `false` | ❌ |
-| `GCS_BUCKET_NAME` | GCS bucket name | `ai-shark-outputs` | Production only |
-| `OUTPUT_DIR` | Local storage directory | `outputs` | ❌ |
-| `API_PORT` | FastAPI server port | `8000` | ❌ |
-| `MAX_FILE_SIZE_MB` | Max upload size (MB) | `100` | ❌ |
+| Variable           | Description              | Default            | Required        |
+| ------------------ | ------------------------ | ------------------ | --------------- |
+| `GOOGLE_API_KEY`   | Google Gemini API key    | -                  | ✅              |
+| `GEMINI_MODEL`     | Gemini model name        | `gemini-2.5-flash` | ❌              |
+| `USE_GCS`          | Use Google Cloud Storage | `false`            | ❌              |
+| `GCS_BUCKET_NAME`  | GCS bucket name          | `ai-shark-outputs` | Production only |
+| `OUTPUT_DIR`       | Local storage directory  | `outputs`          | ❌              |
+| `API_PORT`         | FastAPI server port      | `8000`             | ❌              |
+| `MAX_FILE_SIZE_MB` | Max upload size (MB)     | `100`              | ❌              |
 
 ---
 
@@ -445,84 +446,24 @@ docker build -f Dockerfile.prod -t ai-shark:latest .
 
 ---
 
-## Roadmap
-
-### Current Status: Phase 1 Complete ✅
-- ✅ Pitch deck upload and processing
-- ✅ Metadata extraction
-- ✅ FastAPI backend with job tracking
-- ✅ React UI with drag-and-drop
-- ✅ Docker deployment
-- ✅ GCS integration
-
-### Next Steps
-- ⏳ Phase 2: Additional document processing
-- ⏳ Phase 3: Multi-agent analysis implementation
-- ⏳ Phase 4: Founder simulation interface
-- ⏳ Phase 5: Investment memo generation with weight templates
-- 📋 User authentication and multi-user support
-- 📋 Advanced analytics dashboard
-- 📋 Collaboration features
-
----
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Principles
-
-- Backend processes are async (background tasks)
-- Frontend polls for status (polling-based, not WebSockets)
-- Storage is abstracted (works locally and on GCS)
-- Single deployment (FastAPI serves React static build)
-- Type safety (Python type hints, TypeScript interfaces)
-- Material-UI for consistent premium design
-
----
-
 ## Performance Metrics
 
 ### Automation Impact
 
-| Task | Traditional Time | AI-Shark Time | Automation % |
-|------|-----------------|---------------|--------------|
-| Initial Screening | 1-2 hours | 5-10 minutes | **80%** |
-| Deep Dive Analysis | 4-8 hours | 1-2 hours | **60%** |
-| Financial Metrics Extraction | 30-60 minutes | 2-5 minutes | **90%** |
-| Risk Flag Detection | 1-2 hours | 5-10 minutes | **85%** |
-| Investment Memo Writing | 2-4 hours | 15-30 minutes | **70%** |
+| Task                         | Traditional Time | AI-Shark Time | Automation % |
+| ---------------------------- | ---------------- | ------------- | ------------ |
+| Initial Screening            | 1-2 hours        | 5-10 minutes  | **80%**      |
+| Deep Dive Analysis           | 4-8 hours        | 1-2 hours     | **60%**      |
+| Financial Metrics Extraction | 30-60 minutes    | 2-5 minutes   | **90%**      |
+| Risk Flag Detection          | 1-2 hours        | 5-10 minutes  | **85%**      |
+| Investment Memo Writing      | 2-4 hours        | 15-30 minutes | **70%**      |
 
 ### File Handling
 
-- **Supported formats**: PDF, PPT, PPTX
-- **Max file size**: 100MB
-- **Processing time**: 30-120 seconds (depending on document size)
-- **Concurrent processing**: Up to 10 jobs simultaneously
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue**: "File too large" error
-- **Solution**: Ensure files are under 100MB. Compress or split large presentations.
-
-**Issue**: "Job status not updating"
-- **Solution**: Check network connectivity. Polling interval is 2 seconds.
-
-**Issue**: "Google API key error"
-- **Solution**: Verify `GOOGLE_API_KEY` is set correctly in `.env` file.
-
-**Issue**: Docker build fails
-- **Solution**: Ensure Docker has sufficient memory (4GB+). Clear Docker cache if needed.
+-   **Supported formats**: PDF, PPT, PPTX
+-   **Max file size**: 100MB
+-   **Processing time**: 30-120 seconds (depending on document size)
+-   **Concurrent processing**: Up to 10 jobs simultaneously
 
 ---
 
@@ -534,18 +475,19 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- **Google Gemini** for powering the AI analysis
-- **Material-UI** for the premium component library
-- **FastAPI** for the high-performance backend framework
-- **LangChain** for LLM orchestration
+-   **Google Gemini** for powering the AI analysis
+-   **Material-UI** for the premium component library
+-   **FastAPI** for the high-performance backend framework
+-   **LangChain** for LLM orchestration
 
 ---
 
 ## Contact & Support
 
 For questions, issues, or feature requests:
-- **GitHub Issues**: [Report a bug](https://github.com/yourusername/ai-shark/issues)
-- **Discussions**: [Join the discussion](https://github.com/yourusername/ai-shark/discussions)
+
+-   **GitHub Issues**: [Report a bug](https://github.com/yourusername/ai-shark/issues)
+-   **Discussions**: [Join the discussion](https://github.com/yourusername/ai-shark/discussions)
 
 ---
 

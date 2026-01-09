@@ -1,68 +1,101 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
     background-color: #ffffff;
+    margin: 0;
+    padding: 0;
   }
-  a:hover {
-    color: #747bff;
+
+  * {
+    box-sizing: border-box;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer components {
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .hero-gradient {
+    background: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.04) 0%, rgba(255, 255, 255, 0) 50%);
+  }
+
+  .ui-shadow {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Custom range input styling */
+  input[type='range'] {
+    -webkit-appearance: none;
+    background: transparent;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    margin-top: -8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  input[type='range']::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 999px;
+  }
+
+  input[type='range']::-webkit-slider-thumb:hover {
+    border-color: #3b82f6;
+    transform: scale(1.1);
+  }
+
+  input[type='range']::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    border: 1px solid #cbd5e1;
+    cursor: grab;
+  }
+
+  input[type='range']::-moz-range-track {
+    height: 4px;
+    background: #f1f5f9;
+    border-radius: 999px;
+  }
+
+  /* Phase connector vertical lines */
+  .phase-connector {
+    position: absolute;
+    left: 24px;
+    top: 60px;
+    bottom: -24px;
+    width: 2px;
+    background-color: #e2e8f0;
+    z-index: 0;
+  }
+
+  /* Custom radio/checkbox styles */
+  .custom-radio:checked + div {
+    background-color: #eff6ff;
+    border-color: #3b82f6;
+    color: #1e40af;
+  }
+
+  .custom-radio:checked + div .radio-dot {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
   }
 }

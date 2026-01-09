@@ -45,8 +45,19 @@ class LLMManager:
         self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         self.gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
         self.prompt_manager = PromptManager()
-        self._configure_gemini()
-        
+
+        # Mock mode detection with explicit logging
+        env_value = os.getenv("USE_MOCK_LLM", "false")
+        self.use_mock = env_value.lower() == "true"
+
+        logger.info(f"🔧 LLMManager initialization: USE_MOCK_LLM={env_value}, use_mock={self.use_mock}")
+
+        if not self.use_mock:
+            logger.info("⚠️  Real LLM mode - configuring Gemini API")
+            self._configure_gemini()
+        else:
+            logger.info("✅ Mock LLM mode enabled - skipping API configuration")
+
         # For LangChain compatibility
         self.llm_instance: Optional[BaseLanguageModel] = None
         self.last_request_time = 0
@@ -85,6 +96,11 @@ class LLMManager:
     
     def pdf_to_images(self, pdf_path: str) -> List[Image.Image]:
         """Convert each page of a PDF into a list of PIL Images"""
+        # Mock mode: skip PDF conversion
+        if self.use_mock:
+            logger.info("Mock mode: Skipping PDF to images conversion")
+            return []
+
         try:
             doc = fitz.open(pdf_path)
             images = []
@@ -104,16 +120,22 @@ class LLMManager:
     @retry_with_backoff()
     def extract_metadata(self, page_images: List[Image.Image]) -> Optional[Dict[str, Any]]:
         """Extract startup metadata including name, sector, sub-sector, website, and table of contents"""
+        # Mock mode: return fixed metadata without processing images
+        if self.use_mock:
+            from src.utils.mock_responses import MOCK_METADATA
+            logger.info("Mock mode: Returning mock metadata")
+            return MOCK_METADATA
+
         try:
             logger.info("Extracting metadata from pitch deck...")
             model = genai.GenerativeModel(self.gemini_model)
-            
+
             # Get the metadata extraction prompt
             prompt = self.prompt_manager.format_prompt("metadata_extraction")
-            
+
             # Prepare content list [prompt, image1, image2, ...]
             content = [prompt] + page_images
-            
+
             response = model.generate_content(content)
             print(f"Response: {response}")
             # Clean up the response to extract only the JSON part
@@ -127,13 +149,13 @@ class LLMManager:
                 parts = cleaned_response.split("```")
                 if len(parts) >= 3:
                     cleaned_response = parts[1].strip()
-            
+
             metadata = json.loads(cleaned_response)
             logger.info("Successfully extracted metadata")
             logger.debug(f"Metadata: {json.dumps(metadata, indent=2)}")
-            
+
             return metadata
-            
+
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Error extracting metadata: {e}")
             if 'response' in locals():
@@ -143,20 +165,26 @@ class LLMManager:
     @retry_with_backoff()
     def extract_topic_data(self, topic: str, page_images: List[Image.Image]) -> str:
         """Extract detailed information for a specific topic from its relevant pages"""
+        # Mock mode: return fixed content without processing
+        if self.use_mock:
+            from src.utils.mock_responses import MOCK_TOPIC_CONTENT
+            logger.info(f"Mock mode: Returning mock content for topic '{topic}'")
+            return MOCK_TOPIC_CONTENT.get(topic, f"# {topic}\n\nMock content for {topic}")
+
         try:
             model = genai.GenerativeModel(self.gemini_model)
-            
+
             # Get the topic analysis prompt
             prompt = self.prompt_manager.format_prompt(
                 "topic_analysis",
                 topic=topic,
                 version="v2"
             )
-            
+
             content = [prompt] + page_images
             response = model.generate_content(content)
             return response.text
-            
+
         except Exception as e:
             logger.error(f"Error extracting topic data for '{topic}': {e}")
             return f"Error extracting data for topic '{topic}': {e}"
@@ -332,62 +360,124 @@ class LLMManager:
             "rate_limit_interval": self.min_request_interval,
             "api_configured": bool(os.getenv("GOOGLE_API_KEY"))
         }
-    
+
+    def _get_mock_founder_responses(self) -> str:
+        """
+        Return mock founder responses for testing without hitting API rate limits
+        """
+        return """**Sarah Chen (CEO)**
+
+*Q1: What problem are you solving?*
+We're solving the data analytics gap for SMBs. 70% of small businesses have valuable data but lack the tools or expertise to analyze it. Traditional BI tools like Tableau cost $70/user/month and require data scientists. We make analytics accessible through natural language - any employee can ask questions in plain English and get instant insights.
+
+*Q2: Why is your team uniquely positioned to solve this?*
+I spent 10 years at Google leading Product Management for Google Analytics, working directly with SMB customers. Our CTO Alex built AI infrastructure at OpenAI for 5 years. Our Head of Data came from Segment where she processed analytics for 10,000+ SMB customers. We've seen this problem from every angle - product, technology, and scale.
+
+*Q3: What's your go-to-market strategy?*
+We're going PLG (Product-Led Growth) with a freemium model. Free tier gets 100 queries/month, enough to show value. Premium is $49/user/month - 30% cheaper than Tableau. We target accounting firms, marketing agencies, and e-commerce stores first since they're data-rich but resource-constrained. Our first 500 users came through Product Hunt and G2 reviews with zero paid marketing.
+
+**Alex Rodriguez (CTO)**
+
+*Q1: What's your technical moat?*
+We've built a proprietary SQL generation engine that converts natural language to database queries with 95% accuracy - better than competitors at 75-80%. We use fine-tuned LLMs on 2M+ real business queries we collected. Plus, our semantic caching layer reduces API costs by 60% while maintaining sub-second response times. This gives us 40% better margins than competitors.
+
+*Q2: How do you handle data security and privacy?*
+Security is foundational. We're SOC 2 Type II compliant, all data encrypted at rest (AES-256) and in transit (TLS 1.3). We never train our models on customer data - it's in our terms of service. For enterprises, we offer on-premise deployment. Our architecture keeps customer data in their own database - we only read, never write or store PII.
+
+*Q3: What are your biggest technical challenges?*
+Scale and accuracy. We need to handle 100+ data source integrations (SQL, Snowflake, BigQuery, MongoDB, etc.) with different query syntaxes. Each new connector takes 2-3 weeks. We're also constantly improving our NLP model - edge cases where users ask ambiguous questions. We've built a feedback loop where users can correct wrong queries, which trains our model in real-time.
+
+**Jennifer Wu (Head of Data/Growth)**
+
+*Q1: What does your customer acquisition look like?*
+We're spending $50K/month across Google Ads and content marketing. CAC is $800 with an average LTV of $4,200 (7 year lifetime), giving us 5.25x LTV:CAC. 40% of signups convert to paid within 30 days. Our viral coefficient is 1.3 - each user invites 1.3 colleagues on average. Retention is strong: 92% monthly, 75% annually.
+
+*Q2: Who are your competitors and how do you differentiate?*
+Direct competitors are Mode Analytics, Thoughtspot, and Sisense. We're 50% cheaper and 10x easier to use. Tableau/Power BI are indirect competitors - powerful but need data science teams. Our biggest differentiator is speed to value: customers get insights in 5 minutes vs 5 weeks with traditional BI tools. We win on ease of use, not features.
+
+*Q3: What metrics matter most right now?*
+MRR growth (currently $120K, growing 40% month-over-month), Net Revenue Retention (115% - customers expand usage over time), and activation rate (% of signups that run 10+ queries in first week - currently 62%). We also track query accuracy since that drives retention. Bad answers = churn.
+
+---
+
+**Key Themes Across Responses:**
+- Strong technical foundation with proprietary IP (SQL generation engine)
+- Experienced team with direct domain expertise (Google, OpenAI, Segment)
+- Clear product-market fit with paying customers and strong unit economics
+- Focus on underserved SMB market with PLG motion
+- Security and compliance built in from day one
+- Data-driven approach to growth with healthy metrics"""
+
     @retry_with_backoff()
     def generate_founder_responses(self, prompt: str) -> str:
         """
         Generate founder responses for questionnaire simulation
-        
+
         Args:
             prompt: Formatted prompt for founder response simulation
-            
+
         Returns:
             Generated response string
         """
+        # Mock mode: return simulated founder responses
+        if self.use_mock:
+            logger.info("🔧 Mock mode: Returning simulated founder responses")
+            return self._get_mock_founder_responses()
+
         try:
             logger.info("Generating founder responses using Gemini...")
-            
+
             # Rate limiting
             self._enforce_rate_limit()
-            
+
             model = genai.GenerativeModel(self.gemini_model)
             response = model.generate_content(prompt)
-            
+
             if not response or not response.text:
                 raise LLMConnectionError("Empty response from Gemini API")
-            
+
             logger.info("Successfully generated founder responses")
             return response.text.strip()
-            
+
         except Exception as e:
             logger.error(f"Error generating founder responses: {e}")
             raise LLMConnectionError(f"Failed to generate founder responses: {e}")
 
-# Global instance for backward compatibility
-llm_manager = LLMManager()
+# Global instance for backward compatibility - using lazy initialization
+_llm_manager_instance = None
+
+def get_llm_manager() -> 'LLMManager':
+    """
+    Get or create LLMManager singleton instance.
+    Uses lazy initialization to ensure environment variables are loaded.
+    """
+    global _llm_manager_instance
+    if _llm_manager_instance is None:
+        _llm_manager_instance = LLMManager()
+    return _llm_manager_instance
 
 # Convenience functions for document processing (direct API)
 def extract_metadata(page_images: List[Image.Image]) -> Optional[Dict[str, Any]]:
     """Extract metadata from pitch deck images"""
-    return llm_manager.extract_metadata(page_images)
+    return get_llm_manager().extract_metadata(page_images)
 
 def extract_topic_data(topic: str, page_images: List[Image.Image]) -> str:
     """Extract topic data from images"""
-    return llm_manager.extract_topic_data(topic, page_images)
+    return get_llm_manager().extract_topic_data(topic, page_images)
 
 def structure_document_content(text: str, filename: str) -> str:
     """Structure document content using LLM"""
-    return llm_manager.structure_document_content(text, filename)
+    return get_llm_manager().structure_document_content(text, filename)
 
 def pdf_to_images(pdf_path: str) -> List[Image.Image]:
     """Convert PDF to images"""
-    return llm_manager.pdf_to_images(pdf_path)
+    return get_llm_manager().pdf_to_images(pdf_path)
 
 # Convenience functions for multi-agent system (LangChain)
 def get_langchain_llm(**kwargs) -> Optional[BaseLanguageModel]:
     """Get LangChain LLM instance"""
-    return llm_manager.create_langchain_llm(**kwargs)
+    return get_llm_manager().create_langchain_llm(**kwargs)
 
 def get_default_llm() -> Optional[BaseLanguageModel]:
     """Get default LangChain LLM instance"""
-    return llm_manager.get_default_langchain_llm()
+    return get_llm_manager().get_default_langchain_llm()

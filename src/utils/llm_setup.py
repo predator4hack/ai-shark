@@ -80,7 +80,14 @@ class LLMSetup:
         self.last_request_time = 0
         self.min_request_interval = 1.0  # Minimum seconds between requests
         self.provider = settings.LLM_PROVIDER.lower()
-        self._initialize_provider()
+
+        # Check mock mode
+        self.use_mock = settings.USE_MOCK_LLM
+
+        if not self.use_mock:
+            self._initialize_provider()
+        else:
+            logger.info("Mock LLM mode enabled via settings")
 
     def _initialize_provider(self):
         """Initialize the configured LLM provider"""
@@ -194,7 +201,13 @@ class LLMSetup:
     def get_default_llm(self) -> BaseLanguageModel:
         """Get or create default LLM instance"""
         if self.llm is None:
-            self.llm = self.create_llm()
+            if self.use_mock:
+                # Import mock responses for realistic data
+                from src.utils.mock_responses import MOCK_BUSINESS_ANALYSIS
+                self.llm = MockLLM(responses=[MOCK_BUSINESS_ANALYSIS])
+                logger.info("Created MockLLM instance for testing")
+            else:
+                self.llm = self.create_llm()
         return self.llm
 
     def _enforce_rate_limit(self):
@@ -312,41 +325,81 @@ class LLMSetup:
             return {"provider": "unknown"}
 
 
-# Global LLM setup instance
-llm_setup = LLMSetup()
+# Global LLM setup instance - using lazy initialization
+_llm_setup_instance = None
+
+def get_llm_setup() -> 'LLMSetup':
+    """
+    Get or create LLMSetup singleton instance.
+    Uses lazy initialization to ensure environment variables are loaded.
+    """
+    global _llm_setup_instance
+    if _llm_setup_instance is None:
+        _llm_setup_instance = LLMSetup()
+    return _llm_setup_instance
 
 
 def get_llm() -> BaseLanguageModel:
     """Convenience function to get default LLM instance"""
-    return llm_setup.get_default_llm()
+    return get_llm_setup().get_default_llm()
 
 
 def create_custom_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create custom LLM instance"""
-    return llm_setup.create_llm(**kwargs)
+    return get_llm_setup().create_llm(**kwargs)
 
 
 def create_groq_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create Groq LLM instance"""
-    return llm_setup.create_llm(provider="groq", **kwargs)
+    return get_llm_setup().create_llm(provider="groq", **kwargs)
 
 
 def create_google_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create Google AI LLM instance"""
-    return llm_setup.create_llm(provider="google", **kwargs)
+    return get_llm_setup().create_llm(provider="google", **kwargs)
 
 
 # Testing utilities
 class MockLLM:
-    """Mock LLM for testing purposes"""
+    """Mock LLM for testing purposes with intelligent response routing"""
 
     def __init__(self, responses: List[str] = None):
         self.responses = responses or ["Mock response"]
         self.call_count = 0
+        self.response_cache = {}  # Cache for agent-specific responses
+
+    def _detect_agent_type(self, prompt: str) -> Optional[str]:
+        """Detect which agent is calling based on prompt content"""
+        prompt_lower = prompt.lower()
+
+        if "business model" in prompt_lower or "revenue stream" in prompt_lower:
+            return "business"
+        elif "market size" in prompt_lower or "competition" in prompt_lower:
+            return "market"
+        elif "technology" in prompt_lower or "technical" in prompt_lower:
+            return "tech"
+        elif "risk" in prompt_lower:
+            return "risk"
+
+        return None
 
     def invoke(self, prompt: str, **kwargs) -> object:
-        """Mock invoke method"""
-        response_text = self.responses[self.call_count % len(self.responses)]
+        """Mock invoke method with intelligent response selection"""
+
+        # Try to detect agent type from prompt
+        agent_type = self._detect_agent_type(prompt)
+
+        # Get cached or new response
+        if agent_type and agent_type not in self.response_cache:
+            from src.utils.mock_responses import get_mock_response
+            response_text = get_mock_response(agent_type)
+            self.response_cache[agent_type] = response_text
+        elif agent_type:
+            response_text = self.response_cache[agent_type]
+        else:
+            # Fallback to sequential responses
+            response_text = self.responses[self.call_count % len(self.responses)]
+
         self.call_count += 1
 
         # Create a mock response object

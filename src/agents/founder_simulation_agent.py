@@ -76,13 +76,14 @@ class FounderSimulationAgent:
                 )
             
             # Load reference documents
-            ref_data_dir = Path(company_dir) / "ref-data"
-            reference_docs = self.load_reference_documents(str(ref_data_dir))
-            
+            # Use analysis reports from Phase 3 instead of ref-data
+            analysis_dir = Path(company_dir) / "analysis"
+            reference_docs = self.load_reference_documents(str(analysis_dir))
+
             if not reference_docs:
                 return SimulationResult(
                     success=False,
-                    error_message="No reference documents found in ref-data directory",
+                    error_message="No analysis documents found in analysis directory. Please complete Phase 3 first.",
                     processing_time=time.time() - start_time
                 )
             
@@ -114,7 +115,7 @@ class FounderSimulationAgent:
             print(f"💬 Generated {len(qa_entries)} simulated responses")
             
             # Save results
-            output_path = Path(company_dir) / "ans-founders-checklist.md"
+            output_path = Path(company_dir) / "founders-qa-responses.md"
             success = self.save_simulation_results(qa_entries, str(output_path), reference_docs)
             
             processing_time = time.time() - start_time
@@ -390,10 +391,10 @@ ANSWERS:"""
         
         return "\n".join(responses)
     
-    def save_simulation_results(self, qa_entries: List[QAEntry], output_path: str, 
+    def save_simulation_results(self, qa_entries: List[QAEntry], output_path: str,
                               reference_docs: List[ReferenceDocument]) -> bool:
         """
-        Save simulation results to ans-founders-checklist.md
+        Save simulation results to founders-qa-responses.md
         
         Args:
             qa_entries: List of QA entries

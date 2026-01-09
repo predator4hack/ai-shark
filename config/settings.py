@@ -52,12 +52,21 @@ class Settings:
     PUBLIC_DATA_EXTRACTORS: List[str] = os.getenv("PUBLIC_DATA_EXTRACTORS", "products_services").split(",")
     PUBLIC_DATA_TIMEOUT: int = int(os.getenv("PUBLIC_DATA_TIMEOUT", "60"))
     PUBLIC_DATA_RETRY_ATTEMPTS: int = int(os.getenv("PUBLIC_DATA_RETRY_ATTEMPTS", "2"))
+
+    # Mock Mode Configuration (for testing without API calls)
+    USE_MOCK_LLM: bool = bool(os.getenv("USE_MOCK_LLM", "false").lower() == "true")
     
     def __post_init__(self):
         """Create necessary directories."""
         self.OUTPUT_DIR.mkdir(exist_ok=True)
         self.TEMP_DIR.mkdir(exist_ok=True)
         self.LOG_FILE.parent.mkdir(exist_ok=True)
+
+        # Warn if mock mode is active
+        if self.USE_MOCK_LLM:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("⚠️ MOCK MODE ENABLED - Not suitable for production use!")
     
     def validate_configuration(self) -> bool:
         """Validate configuration settings.
@@ -65,16 +74,18 @@ class Settings:
         Returns:
             True if configuration is valid, False otherwise
         """
-        # Validate API keys based on provider
-        if self.LLM_PROVIDER.lower() == "google":
-            if not self.GOOGLE_API_KEY:
+        # Skip API key validation in mock mode
+        if not self.USE_MOCK_LLM:
+            # Validate API keys based on provider
+            if self.LLM_PROVIDER.lower() == "google":
+                if not self.GOOGLE_API_KEY:
+                    return False
+            elif self.LLM_PROVIDER.lower() == "groq":
+                if not self.GROQ_API_KEY:
+                    return False
+            else:
+                # Invalid provider
                 return False
-        elif self.LLM_PROVIDER.lower() == "groq":
-            if not self.GROQ_API_KEY:
-                return False
-        else:
-            # Invalid provider
-            return False
 
         if self.MAX_FILE_SIZE_MB <= 0:
             return False

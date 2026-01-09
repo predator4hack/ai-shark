@@ -19,7 +19,18 @@ from markdown.extensions import toc, tables, fenced_code
 from langchain_core.documents import Document as LangChainDocument
 
 from src.models.document_models import DocumentMetadata, ParsedContent, StartupDocument
-from task_config import Config
+
+# Import Config - handle both direct run and package imports
+try:
+    from task_config import Config
+except ModuleNotFoundError:
+    import sys
+    from pathlib import Path
+    # Add project root to path if not already there
+    project_root = Path(__file__).parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    from task_config import Config
 
 
 logger = logging.getLogger(__name__)

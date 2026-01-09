@@ -445,3 +445,187 @@ prompts:
             {content}
 
             Please provide a well-structured, cleaned version of this content.
+
+    # Multi-Agent Analysis Prompts (Phase 2)
+    business_analysis_combined:
+        template: |
+            You are a senior business analyst. Analyze this startup using BOTH documents provided:
+
+            PITCH DECK: {pitch_deck_content}
+
+            PUBLIC DATA: {public_data_content}
+
+            Create a CONCISE executive summary in markdown format. MAXIMUM 80 lines total.
+
+            # Business Analysis Report
+
+            ## Executive Summary
+            Provide 3-4 key bullet points:
+            - **Business Model:** 1-2 sentence summary of revenue model and value proposition
+            - **Market Position:** 1-2 sentence summary of TAM/SAM and competitive positioning
+            - **Key Strength:** 1 sentence on primary competitive advantage
+            - **Primary Risk:** 1 sentence on biggest concern
+
+            ## Business Model & Market Position
+            Combine business and market insights into 6-8 bullet points:
+            - Revenue model and pricing strategy (2-3 points)
+            - Target market and TAM/SAM (1-2 points)
+            - Competitive differentiation (2-3 points)
+
+            ## Key Risks & Opportunities
+            **Top 3 Risks:**
+            1. [Risk 1 - 1 sentence with severity]
+            2. [Risk 2 - 1 sentence with severity]
+            3. [Risk 3 - 1 sentence with severity]
+
+            **Top 2 Opportunities:**
+            1. [Opportunity 1 - 1 sentence]
+            2. [Opportunity 2 - 1 sentence]
+
+            ## Critical Questions
+            List ONLY top 3-4 most critical questions for founders:
+            1. [Question about biggest uncertainty or missing information]
+            2. [Question about scalability or growth potential]
+            3. [Question about risk mitigation]
+            4. [Optional 4th question if truly critical]
+
+            Instructions: Be concise. Focus on key insights only. Maximum 80 lines. No repetition. Cite evidence briefly.
+
+    market_analysis_combined:
+        template: |
+            You are a senior market analyst. Analyze this startup using BOTH documents provided:
+
+            PITCH DECK: {pitch_deck_content}
+
+            PUBLIC DATA: {public_data_content}
+
+            Create a CONCISE market analysis in markdown format. MAXIMUM 80 lines total.
+
+            # Market & Competition Analysis Report
+
+            ## Market Opportunity Summary
+            Provide 4-5 key bullet points:
+            - **TAM/SAM/SOM:** Market size figures with CAGR if available
+            - **Market Growth:** Key growth drivers and trends (1 sentence)
+            - **Market Timing:** Why now? Product-market fit indicators (1 sentence)
+            - **Addressable Segments:** Primary customer segments (1 sentence)
+
+            ## Competitive Landscape
+            Focus on top 3 competitors only (6-8 bullet points total):
+            - Competitor 1: Position, strengths, weaknesses (2-3 points)
+            - Competitor 2: Position, strengths, weaknesses (2-3 points)
+            - Competitor 3: Position, strengths, weaknesses (2-3 points)
+            - Startup's differentiation vs. competition (1-2 points)
+
+            ## Go-to-Market Strategy
+            Provide 5-6 bullet points on:
+            - Customer acquisition approach
+            - Distribution channels
+            - Pricing strategy
+            - Market entry barriers
+            - Competitive moats/advantages
+
+            ## Critical Questions
+            List ONLY top 3-4 most critical market-related questions:
+            1. [Question about market size validation or assumptions]
+            2. [Question about competitive positioning or differentiation]
+            3. [Question about GTM execution or customer acquisition]
+            4. [Optional 4th question if truly critical]
+
+            Instructions: Be concise. Prioritize investor-relevant insights. Maximum 80 lines. Cite evidence briefly. Flag critical red flags only.
+
+    tech_analysis_combined:
+        template: |
+            You are a senior technical architect. Analyze this startup using BOTH documents provided:
+
+            PITCH DECK: {pitch_deck_content}
+
+            PUBLIC DATA: {public_data_content}
+
+            Create a CONCISE technical analysis in markdown format. MAXIMUM 80 lines total.
+
+            # Technical Analysis Report
+
+            ## Tech Stack & Architecture Summary
+            Provide 5-6 key bullet points:
+            - **Core Technologies:** Frontend, backend, database, cloud (1-2 points)
+            - **Architecture Pattern:** Monolith/microservices, design choices (1 point)
+            - **Infrastructure:** Hosting, CI/CD, containerization if mentioned (1 point)
+            - **AI/ML Stack:** If applicable, frameworks and deployment (1 point)
+            - **Technical Innovation:** Proprietary tech, patents, unique algorithms (1 point)
+
+            ## Scalability & Security Assessment
+            Provide 5-6 bullet points on:
+            - Scalability potential (high/medium/low) with justification
+            - Performance considerations and bottlenecks
+            - Security measures and data protection approach
+            - Compliance requirements (GDPR, SOC2, etc. if mentioned)
+            - Infrastructure reliability and disaster recovery
+
+            ## Technical Risks
+            List ONLY top 3 critical technical risks:
+            1. [Risk 1 - technology choice, architecture, or technical debt concern]
+            2. [Risk 2 - scalability, security, or dependency risk]
+            3. [Risk 3 - team capability, IP, or execution risk]
+
+            ## Critical Questions
+            List ONLY top 3-4 most critical technical questions:
+            1. [Question about architecture scalability or technology choices]
+            2. [Question about security, compliance, or data handling]
+            3. [Question about technical team capability or IP protection]
+            4. [Optional 4th question if truly critical]
+
+            Instructions: Be concise. Focus on investor-relevant technical insights. Maximum 80 lines. Cite evidence briefly. Flag critical technical red flags only.
+
+    risk_analysis_combined:
+        template: |
+            You are a senior risk analyst. Analyze this startup using BOTH documents provided:
+
+            PITCH DECK: {pitch_deck_content}
+
+            PUBLIC DATA: {public_data_content}
+
+            Create a CONCISE risk assessment in markdown format. MAXIMUM 80 lines total.
+
+            # Risk Assessment Report
+
+            ## Top 5 Critical Risks
+            Prioritize ONLY the 5 most critical risks across all categories (business, market, technical, financial, regulatory, operational):
+
+            1. **[Risk Category] Risk Name** (Severity: Critical/High/Medium)
+               - 1-2 sentence description with evidence
+               - Quick mitigation approach (1 sentence)
+
+            2. **[Risk Category] Risk Name** (Severity: Critical/High/Medium)
+               - 1-2 sentence description with evidence
+               - Quick mitigation approach (1 sentence)
+
+            3. **[Risk Category] Risk Name** (Severity: Critical/High/Medium)
+               - 1-2 sentence description with evidence
+               - Quick mitigation approach (1 sentence)
+
+            4. **[Risk Category] Risk Name** (Severity: Critical/High/Medium)
+               - 1-2 sentence description with evidence
+               - Quick mitigation approach (1 sentence)
+
+            5. **[Risk Category] Risk Name** (Severity: Critical/High/Medium)
+               - 1-2 sentence description with evidence
+               - Quick mitigation approach (1 sentence)
+
+            ## Red Flags
+            List ONLY critical red flags (if any). Maximum 3 bullet points:
+            - [Red flag 1 - deal-breaker or major concern]
+            - [Red flag 2 - if applicable]
+            - [Red flag 3 - if applicable]
+
+            ## Overall Risk Assessment
+            1-2 sentences: Overall risk rating (Low/Medium/High/Critical) with brief justification.
+
+            ## Critical Questions
+            List ONLY top 3-4 risk-related questions for founders:
+            1. [Question about highest severity risk mitigation]
+            2. [Question about financial or execution risk]
+            3. [Question about market or competitive risk]
+            4. [Optional 4th question if truly critical]
+
+            Instructions: Be concise. Prioritize by severity and likelihood. Maximum 80 lines. Cite evidence briefly. Focus on investor decision-making risks.

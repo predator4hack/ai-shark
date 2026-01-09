@@ -1,0 +1,371 @@
+import { createSlice } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
+import type { AnalysisState, CompanyMetadata, AgentWeights, AgentInfo } from '../../types/models'
+
+const initialState: AnalysisState = {
+  companyName: null,
+  metadata: null,
+  documents: {
+    pitchDeckPath: null,
+    additionalDocs: [],
+  },
+  agentWeights: {
+    business: { weight: 30, enabled: true },
+    market: { weight: 40, enabled: true },
+    tech: { weight: 20, enabled: true },
+    risk: { weight: 10, enabled: true },
+  },
+  simulationMode: 'context',
+  phases: {
+    phase1: {
+      id: 'phase1',
+      status: 'pending',
+      progressMessage: '',
+    },
+    phase2: {
+      id: 'phase2',
+      status: 'pending',
+      progressMessage: '',
+    },
+    phase3: {
+      id: 'phase3',
+      status: 'pending',
+      progressMessage: '',
+    },
+    phase4: {
+      id: 'phase4',
+      status: 'pending',
+      progressMessage: '',
+    },
+    phase5: {
+      id: 'phase5',
+      status: 'pending',
+      progressMessage: '',
+    },
+  },
+  currentActivePhase: 1,
+  overallStatus: 'idle',
+  error: null,
+  uploadJobId: null,
+  uploadStatus: 'idle',
+  uploadProgress: '',
+  // Phase 2: Multi-agent analysis
+  availableAgents: [],
+  selectedAgents: [],
+  analysisJobId: null,
+  // Phase 4: Founder simulation
+  simulationJobId: null,
+  // Phase 5: Final memo generation
+  memoJobId: null,
+}
+
+const analysisSlice = createSlice({
+  name: 'analysis',
+  initialState,
+  reducers: {
+    setCompanyData: (state, action: PayloadAction<{
+      companyName: string
+      metadata: CompanyMetadata
+    }>) => {
+      state.companyName = action.payload.companyName
+      state.metadata = action.payload.metadata
+    },
+    uploadPitchDeck: (state, action: PayloadAction<string>) => {
+      state.documents.pitchDeckPath = action.payload
+      state.phases.phase1.status = 'completed'
+      state.phases.phase1.progressMessage = 'Pitch deck processed successfully'
+    },
+    uploadAdditionalDocument: (state, action: PayloadAction<string>) => {
+      state.documents.additionalDocs.push(action.payload)
+    },
+    removeDocument: (state, action: PayloadAction<string>) => {
+      state.documents.additionalDocs = state.documents.additionalDocs.filter(
+        doc => doc !== action.payload
+      )
+    },
+    updatePhaseStatus: (state, action: PayloadAction<{
+      phaseId: 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5'
+      status: 'pending' | 'running' | 'completed' | 'failed'
+      progressMessage?: string
+      result?: any
+      error?: string
+    }>) => {
+      const { phaseId, status, progressMessage, result, error } = action.payload
+      state.phases[phaseId].status = status
+      if (progressMessage !== undefined) {
+        state.phases[phaseId].progressMessage = progressMessage
+      }
+      if (result !== undefined) {
+        state.phases[phaseId].result = result
+      }
+      if (error !== undefined) {
+        state.phases[phaseId].error = error
+      }
+    },
+    updateAgentWeights: (state, action: PayloadAction<AgentWeights>) => {
+      state.agentWeights = action.payload
+    },
+    applyWeightTemplate: (state, action: PayloadAction<'balanced' | 'tech-focused' | 'market-focused'>) => {
+      const template = action.payload
+      switch (template) {
+        case 'balanced':
+          // Equal distribution: 25% each
+          state.agentWeights = {
+            business: { weight: 25, enabled: true },
+            market: { weight: 25, enabled: true },
+            tech: { weight: 25, enabled: true },
+            risk: { weight: 25, enabled: true },
+          }
+          break
+        case 'tech-focused':
+          // Tech 50%, others ~17% each (50 + 17 + 17 + 16 = 100)
+          state.agentWeights = {
+            business: { weight: 17, enabled: true },
+            market: { weight: 17, enabled: true },
+            tech: { weight: 50, enabled: true },
+            risk: { weight: 16, enabled: true },
+          }
+          break
+        case 'market-focused':
+          // Market 50%, others ~17% each (50 + 17 + 17 + 16 = 100)
+          state.agentWeights = {
+            business: { weight: 17, enabled: true },
+            market: { weight: 50, enabled: true },
+            tech: { weight: 17, enabled: true },
+            risk: { weight: 16, enabled: true },
+          }
+          break
+      }
+    },
+    setSimulationMode: (state, action: PayloadAction<'context' | 'direct-qa'>) => {
+      state.simulationMode = action.payload
+    },
+    setCurrentActivePhase: (state, action: PayloadAction<number>) => {
+      state.currentActivePhase = action.payload
+    },
+    setError: (state, action: PayloadAction<string>) => {
+      state.error = action.payload
+      state.overallStatus = 'failed'
+    },
+    clearError: (state) => {
+      state.error = null
+    },
+    setUploadJobId: (state, action: PayloadAction<string>) => {
+      state.uploadJobId = action.payload
+      state.uploadStatus = 'processing'
+      state.phases.phase1.status = 'running'
+      state.phases.phase1.progressMessage = 'Processing pitch deck...'
+    },
+    updateUploadStatus: (state, action: PayloadAction<{
+      status: 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
+      progressMessage: string
+    }>) => {
+      state.uploadStatus = action.payload.status
+      state.uploadProgress = action.payload.progressMessage
+      state.phases.phase1.progressMessage = action.payload.progressMessage
+    },
+    setUploadResult: (state, action: PayloadAction<{
+      companyName: string
+      metadata: CompanyMetadata
+      files: string[]
+    }>) => {
+      state.companyName = action.payload.companyName
+      state.metadata = action.payload.metadata
+      state.documents.pitchDeckPath = action.payload.files[0] || null
+      state.uploadStatus = 'completed'
+      state.phases.phase1.status = 'completed'
+      state.phases.phase1.progressMessage = 'Pitch deck processed successfully'
+      state.phases.phase1.result = { files: action.payload.files }
+      state.currentActivePhase = 2
+    },
+    setUploadError: (state, action: PayloadAction<string>) => {
+      state.uploadStatus = 'failed'
+      state.phases.phase1.status = 'failed'
+      state.phases.phase1.error = action.payload
+      state.error = action.payload
+    },
+    resetUpload: (state) => {
+      state.uploadJobId = null
+      state.uploadStatus = 'idle'
+      state.uploadProgress = ''
+      state.companyName = null
+      state.metadata = null
+      state.documents.pitchDeckPath = null
+      state.phases.phase1.status = 'pending'
+      state.phases.phase1.progressMessage = ''
+      state.phases.phase1.error = undefined
+      state.currentActivePhase = 1
+      state.error = null
+    },
+    // Phase 2: Multi-agent analysis actions
+    setAvailableAgents: (state, action: PayloadAction<AgentInfo[]>) => {
+      state.availableAgents = action.payload
+      // Auto-select all available agents by default
+      state.selectedAgents = action.payload
+        .filter(agent => agent.available)
+        .map(agent => agent.agent_type)
+    },
+    toggleAgentSelection: (state, action: PayloadAction<string>) => {
+      const agentType = action.payload
+      const index = state.selectedAgents.indexOf(agentType)
+      if (index > -1) {
+        // Deselect agent
+        state.selectedAgents = state.selectedAgents.filter(a => a !== agentType)
+      } else {
+        // Select agent (only if it's available)
+        const agent = state.availableAgents.find(a => a.agent_type === agentType)
+        if (agent && agent.available) {
+          state.selectedAgents.push(agentType)
+        }
+      }
+    },
+    setSelectedAgents: (state, action: PayloadAction<string[]>) => {
+      // Filter to only include available agents
+      const availableAgentTypes = state.availableAgents
+        .filter(a => a.available)
+        .map(a => a.agent_type)
+      state.selectedAgents = action.payload.filter(a =>
+        availableAgentTypes.includes(a)
+      )
+    },
+    setAnalysisJobId: (state, action: PayloadAction<string>) => {
+      state.analysisJobId = action.payload
+      state.phases.phase3.status = 'running'
+      state.phases.phase3.progressMessage = 'Running multi-agent analysis...'
+    },
+    setAnalysisResult: (state, action: PayloadAction<any>) => {
+      // Extract questionnaire result first
+      const questionnaireResult = action.payload.questionnaire
+
+      // Store the result
+      state.phases.phase3.result = action.payload
+
+      if (questionnaireResult) {
+        state.phases.phase3.questionnaire = questionnaireResult
+
+        // Check questionnaire status
+        if (questionnaireResult.success) {
+          // Success - mark Phase 3 complete
+          state.phases.phase3.status = 'completed'
+          state.phases.phase3.progressMessage = 'Multi-agent analysis completed!'
+          state.currentActivePhase = 4
+        } else if (questionnaireResult.metadata?.reason === 'skip_generation') {
+          // Intentionally skipped - still mark as complete
+          state.phases.phase3.status = 'completed'
+          state.phases.phase3.progressMessage = 'Multi-agent analysis completed (questionnaire skipped)'
+          state.currentActivePhase = 4
+        } else {
+          // Failed - mark Phase 3 as failed
+          state.phases.phase3.status = 'failed'
+          state.phases.phase3.error = questionnaireResult.error_message || 'Questionnaire generation failed'
+          state.phases.phase3.progressMessage = 'Analysis completed, but questionnaire generation failed'
+        }
+      } else {
+        // No questionnaire in result - treat as error
+        state.phases.phase3.status = 'failed'
+        state.phases.phase3.error = 'Questionnaire result missing from analysis'
+        state.phases.phase3.progressMessage = 'Analysis completed, but questionnaire result is missing'
+      }
+
+      state.analysisJobId = null
+    },
+    setAnalysisError: (state, action: PayloadAction<string>) => {
+      state.phases.phase3.status = 'failed'
+      state.phases.phase3.error = action.payload
+      state.error = action.payload
+      state.analysisJobId = null
+    },
+    setQuestionnaireError: (state, action: PayloadAction<string>) => {
+      if (state.phases.phase3.questionnaire) {
+        state.phases.phase3.questionnaire.success = false
+        state.phases.phase3.questionnaire.error_message = action.payload
+      }
+    },
+    setSimulationJobId: (state, action: PayloadAction<string>) => {
+      state.simulationJobId = action.payload
+      state.phases.phase4.status = 'running'
+      state.phases.phase4.progressMessage = 'Processing Q&A simulation...'
+    },
+    setSimulationResult: (state, action: PayloadAction<any>) => {
+      state.phases.phase4.simulationResult = action.payload
+
+      if (action.payload.success && action.payload.qa_file) {
+        state.phases.phase4.status = 'completed'
+        state.phases.phase4.progressMessage = 'Q&A simulation completed!'
+        state.currentActivePhase = 5
+      } else {
+        state.phases.phase4.status = 'failed'
+        state.phases.phase4.error = action.payload.error_message || 'Simulation failed'
+      }
+
+      state.simulationJobId = null
+    },
+    setSimulationError: (state, action: PayloadAction<string>) => {
+      state.phases.phase4.status = 'failed'
+      state.phases.phase4.error = action.payload
+      state.simulationJobId = null
+    },
+    // Phase 5: Final memo generation actions
+    setMemoJobId: (state, action: PayloadAction<string>) => {
+      state.memoJobId = action.payload
+      state.phases.phase5.status = 'running'
+      state.phases.phase5.progressMessage = 'Generating final investment memo...'
+    },
+    setMemoResult: (state, action: PayloadAction<any>) => {
+      state.phases.phase5.memoResult = action.payload
+
+      if (action.payload.success && action.payload.memo_file) {
+        state.phases.phase5.status = 'completed'
+        state.phases.phase5.progressMessage = 'Final memo generated successfully!'
+      } else {
+        state.phases.phase5.status = 'failed'
+        state.phases.phase5.error = action.payload.error_message || 'Memo generation failed'
+      }
+
+      state.memoJobId = null
+    },
+    setMemoError: (state, action: PayloadAction<string>) => {
+      state.phases.phase5.status = 'failed'
+      state.phases.phase5.error = action.payload
+      state.memoJobId = null
+    },
+    reset: () => {
+      return initialState
+    },
+  },
+})
+
+export const {
+  setCompanyData,
+  uploadPitchDeck,
+  uploadAdditionalDocument,
+  removeDocument,
+  updatePhaseStatus,
+  updateAgentWeights,
+  applyWeightTemplate,
+  setSimulationMode,
+  setCurrentActivePhase,
+  setError,
+  clearError,
+  setUploadJobId,
+  updateUploadStatus,
+  setUploadResult,
+  setUploadError,
+  resetUpload,
+  setAvailableAgents,
+  toggleAgentSelection,
+  setSelectedAgents,
+  setAnalysisJobId,
+  setAnalysisResult,
+  setAnalysisError,
+  setQuestionnaireError,
+  setSimulationJobId,
+  setSimulationResult,
+  setSimulationError,
+  setMemoJobId,
+  setMemoResult,
+  setMemoError,
+  reset,
+} = analysisSlice.actions
+
+export default analysisSlice.reducer

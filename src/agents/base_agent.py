@@ -16,7 +16,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser, JsonOutputParser
 from pydantic import BaseModel, ValidationError
 
-from src.utils.llm_setup import get_llm, llm_setup
+from src.utils.llm_setup import get_llm, get_llm_setup
 from src.models.document_models import StartupDocument
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -243,7 +243,7 @@ class BaseAnalysisAgent(ABC):
                 response = response_obj.content
             else:
                 # Use the real LLM setup
-                response = llm_setup.invoke_with_retry(self.llm, prompt, **invoke_kwargs)
+                response = get_llm_setup().invoke_with_retry(self.llm, prompt, **invoke_kwargs)
 
             if not response or not response.strip():
                 raise AnalysisError("LLM returned empty response")
