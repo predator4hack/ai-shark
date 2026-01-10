@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 import os
 
+from config.secrets import get_google_api_key
+
 
 class Settings(BaseSettings):
     # API Settings
@@ -14,7 +16,7 @@ class Settings(BaseSettings):
     output_dir: str = "outputs"
 
     # LLM Settings (inherited from existing config)
-    google_api_key: str = ""
+    google_api_key: str = get_google_api_key()
     gemini_model: str = "gemini-2.5-flash"
 
     # File Upload Limits

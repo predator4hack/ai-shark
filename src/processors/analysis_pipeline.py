@@ -28,6 +28,8 @@ import inspect
 import importlib
 from datetime import datetime
 from pathlib import Path
+
+from config.secrets import get_google_api_key, get_groq_api_key
 from typing import List, Dict, Any, Optional, Callable
 
 # Import AI-Shark components
@@ -1012,11 +1014,11 @@ def main():
     if use_real_llm:
         # Check if API keys are configured
         provider = os.getenv('LLM_PROVIDER', 'google').lower()
-        if provider == 'google' and not os.getenv('GOOGLE_API_KEY'):
-            print("❌ Google API key not found. Set GOOGLE_API_KEY environment variable.")
+        if provider == 'google' and not get_google_api_key():
+            print("❌ Google API key not found. Set GOOGLE_API_KEY environment variable or mount as secret.")
             use_real_llm = False
-        elif provider == 'groq' and not os.getenv('GROQ_API_KEY'):
-            print("❌ Groq API key not found. Set GROQ_API_KEY environment variable.")
+        elif provider == 'groq' and not get_groq_api_key():
+            print("❌ Groq API key not found. Set GROQ_API_KEY environment variable or mount as secret.")
             use_real_llm = False
 
     if not use_real_llm:

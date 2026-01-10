@@ -47,7 +47,6 @@ def validate_directories():
     """Validate that all required directories exist and are writable."""
     directories = [
         settings.OUTPUT_DIR,
-        settings.TEMP_DIR,
         settings.LOG_FILE.parent
     ]
     

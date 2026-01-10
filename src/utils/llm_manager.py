@@ -15,6 +15,8 @@ import fitz  # PyMuPDF
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+from config.secrets import get_google_api_key
+
 # LangChain imports (for multi-agent system compatibility)
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -64,10 +66,10 @@ class LLMManager:
         self.min_request_interval = 1.0
     
     def _configure_gemini(self):
-        """Configure the Gemini API with the key from environment variables"""
-        api_key = os.getenv("GOOGLE_API_KEY")
+        """Configure the Gemini API with the key from environment variables or mounted secret"""
+        api_key = get_google_api_key()
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found. Please set it in a .env file.")
+            raise ValueError("GOOGLE_API_KEY not found. Please set it in a .env file or mount as secret.")
         genai.configure(api_key=api_key)
         logger.info("Gemini API configured successfully")
     

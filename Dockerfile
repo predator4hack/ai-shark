@@ -1,5 +1,24 @@
-# Multi-stage build for AI Shark - VC Document Analyzer
-FROM python:3.11-slim AS builder
+# Production Multi-stage Dockerfile - AI-Shark VC Document Analyzer
+# Stage 1: Build React Frontend
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+RUN npm install
+
+# Copy frontend source code
+COPY frontend/ ./
+
+# Build production React app
+RUN npm run build
+
+# Output: /app/frontend/dist
+
+# =============================================================================
+# Stage 2: Python Dependencies Builder
+FROM python:3.11-slim AS python-builder
 
 # Install system dependencies required for building packages
 RUN apt-get update && apt-get install -y \
@@ -23,10 +42,11 @@ COPY pyproject.toml ./
 # Generate lockfile and install dependencies using UV
 RUN uv lock && uv sync --no-dev
 
-# Production stage
+# =============================================================================
+# Stage 3: Production Runtime
 FROM python:3.11-slim AS production
 
-# Install system dependencies for runtime (PyMuPDF, weasyprint, etc.)
+# Install system dependencies for runtime
 RUN apt-get update && apt-get install -y \
     libfontconfig1 \
     libxrender1 \
@@ -43,24 +63,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create non-root user for security with home directory
+# Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Set working directory
 WORKDIR /app
 
-# Copy virtual environment from builder stage
-COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+# Copy virtual environment from python-builder stage
+COPY --from=python-builder --chown=appuser:appuser /app/.venv /app/.venv
 
-# Copy application code (only essential files)
+# Copy application code
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
 COPY --chown=appuser:appuser streamlit_ui.py ./
 COPY --chown=appuser:appuser task_config.py ./
 COPY --chown=appuser:appuser pyproject.toml ./
 
-# Copy .env file if it exists (optional)
-COPY --chown=appuser:appuser .env* ./
+# Copy React build from frontend-builder stage
+COPY --from=frontend-builder --chown=appuser:appuser /app/frontend/dist ./frontend/dist
 
 # Create outputs directory for file processing
 RUN mkdir -p /app/outputs && chown appuser:appuser /app/outputs
@@ -77,17 +97,13 @@ USER appuser
 # Expose port 8080 for Cloud Run
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/_stcore/health || exit 1
+# Health check for FastAPI
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
-# Set Streamlit configuration for Cloud Run
-ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
-ENV STREAMLIT_SERVER_PORT=8080
-ENV STREAMLIT_SERVER_HEADLESS=true
-ENV STREAMLIT_SERVER_ENABLE_CORS=false
-ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
-ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+# Environment variables for production
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Run the Streamlit application
-CMD ["streamlit", "run", "streamlit_ui.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.headless=true", "--browser.gatherUsageStats=false"]
+# Run FastAPI (serves both API and React static files)
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]

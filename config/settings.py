@@ -6,6 +6,8 @@ from typing import List
 
 from dotenv import load_dotenv
 
+from config.secrets import get_google_api_key, get_groq_api_key
+
 # Load environment variables
 load_dotenv()
 
@@ -14,8 +16,8 @@ class Settings:
     """Application settings and configuration."""
     
     # API Configuration
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GOOGLE_API_KEY: str = get_google_api_key()
+    GROQ_API_KEY: str = get_groq_api_key()
     
     # Application Configuration
     APP_NAME: str = os.getenv("APP_NAME", "VC Document Analyzer")
@@ -24,7 +26,6 @@ class Settings:
     
     # Directory Configuration
     OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "outputs"))
-    TEMP_DIR: Path = Path(os.getenv("TEMP_DIR", "temp"))
     
     # Logging Configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -59,7 +60,6 @@ class Settings:
     def __post_init__(self):
         """Create necessary directories."""
         self.OUTPUT_DIR.mkdir(exist_ok=True)
-        self.TEMP_DIR.mkdir(exist_ok=True)
         self.LOG_FILE.parent.mkdir(exist_ok=True)
 
         # Warn if mock mode is active
