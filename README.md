@@ -62,29 +62,33 @@ The platform transforms what traditionally takes VC analysts 15-30 hours of manu
 AI-Shark includes a comprehensive **mock mode** that eliminates the need for LLM API calls during development and testing:
 
 **Benefits:**
-- ⚡ **Instant responses** - No waiting for API calls (perfect for frontend development)
-- 💰 **Zero cost** - No API token consumption during testing
-- 🔑 **No API keys needed** - Frontend developers can work without credentials
-- 📊 **Realistic data** - Returns meaningful mock analysis reports with proper structure
-- 🚀 **Full pipeline support** - Works with all endpoints and multi-agent analysis
+
+-   ⚡ **Instant responses** - No waiting for API calls (perfect for frontend development)
+-   💰 **Zero cost** - No API token consumption during testing
+-   🔑 **No API keys needed** - Frontend developers can work without credentials
+-   📊 **Realistic data** - Returns meaningful mock analysis reports with proper structure
+-   🚀 **Full pipeline support** - Works with all endpoints and multi-agent analysis
 
 **How to Enable:**
+
 ```bash
 # In your .env file
 USE_MOCK_LLM=true
 ```
 
 **What Gets Skipped:**
-- LLM API calls to Google Gemini / Groq
-- PDF/PPT file processing and conversion
-- Returns pre-defined realistic analysis for "TechVenture AI" startup
+
+-   LLM API calls to Google Gemini / Groq
+-   PDF/PPT file processing and conversion
+-   Returns pre-defined realistic analysis for "TechVenture AI" startup
 
 **Use Cases:**
-- Frontend development without backend dependencies
-- Continuous integration testing
-- Development without API keys
-- Performance testing without rate limits
-- Demonstrating the platform to stakeholders
+
+-   Frontend development without backend dependencies
+-   Continuous integration testing
+-   Development without API keys
+-   Performance testing without rate limits
+-   Demonstrating the platform to stakeholders
 
 See the [Mock Mode Documentation](#mock-mode-development) section below for detailed usage.
 
@@ -307,9 +311,9 @@ gcloud run deploy ai-shark \
   --set-env-vars USE_GCS=true,GCS_BUCKET_NAME=ai-shark-outputs \
   --set-secrets GOOGLE_API_KEY=google-api-key:latest \
   --memory 2Gi \
-  --cpu 2 \
+  --cpu 1 \
   --timeout 600 \
-  --max-instances 10
+  --max-instances 1
 ```
 
 ### 3. Access Your Deployment

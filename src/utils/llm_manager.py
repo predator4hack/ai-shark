@@ -42,7 +42,7 @@ class LLMManager:
     """
     
     def __init__(self):
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self.gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
         self.prompt_manager = PromptManager()
 

@@ -433,10 +433,6 @@ export const AnalysisPage: React.FC = () => {
         });
     };
 
-    const handleApplyWeights = () => {
-        dispatch(updateAgentWeights(sliderValues));
-    };
-
     const autoBalanceWeights = () => {
         const total = Object.values(sliderValues).reduce(
             (sum, w) => sum + w.weight,
