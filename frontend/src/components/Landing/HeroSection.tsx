@@ -22,13 +22,13 @@ const HeroSection = () => {
                 <h1 className="md:text-7xl leading-[1.1] text-5xl font-semibold text-slate-900 tracking-tighter mb-6">
                     Automate your
                     <br />
-                    <span className="text-slate-400">investment memos.</span>
+                    <span className="text-slate-400">investment memos</span>
                 </h1>
 
                 <p className="md:text-xl leading-relaxed text-lg font-light text-slate-500 max-w-2xl mx-auto mb-10">
                     AI-Shark transforms 15-30 hours of manual diligence into
                     structured analysis. Process pitch decks, simulate founder
-                    Q&A, and generate comprehensive memos instantly.
+                    Q&A, and generate comprehensive memos instantly
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">

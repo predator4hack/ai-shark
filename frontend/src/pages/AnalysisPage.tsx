@@ -310,7 +310,9 @@ export const AnalysisPage: React.FC = () => {
                 }
             } catch (error: any) {
                 console.error("Memo polling error:", error);
-                dispatch(setMemoError("Failed to fetch memo generation status"));
+                dispatch(
+                    setMemoError("Failed to fetch memo generation status")
+                );
                 setMemoPolling(false);
             }
         }, POLLING.INTERVAL_MS);
@@ -417,7 +419,8 @@ export const AnalysisPage: React.FC = () => {
         } catch (error: any) {
             dispatch(
                 setMemoError(
-                    error.response?.data?.detail || "Failed to start memo generation"
+                    error.response?.data?.detail ||
+                        "Failed to start memo generation"
                 )
             );
         }
@@ -1321,8 +1324,8 @@ export const AnalysisPage: React.FC = () => {
                                         </h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             Answer the questionnare document
-                                            prepared in the previous step to
-                                            prepare detailed analysis
+                                            prepared in the previous step for
+                                            detailed analysis
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -1423,7 +1426,7 @@ export const AnalysisPage: React.FC = () => {
                                             />
                                             <div className="px-4 py-1.5 rounded-md text-xs font-medium text-slate-500 transition-all flex items-center gap-2 border border-transparent">
                                                 <div className="w-2 h-2 rounded-full border border-slate-400 radio-dot bg-transparent"></div>
-                                                Direct Q&A Upload
+                                                Q&A Upload
                                             </div>
                                         </label>
                                     </div>
@@ -2013,7 +2016,8 @@ export const AnalysisPage: React.FC = () => {
                                             <div className="mt-6 pt-6 border-t border-slate-100">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <h4 className="text-xs font-semibold text-slate-900">
-                                                        Investment Memo Generated
+                                                        Investment Memo
+                                                        Generated
                                                     </h4>
                                                     <span className="text-[10px] text-green-600 flex items-center gap-1">
                                                         <Icon
@@ -2036,13 +2040,21 @@ export const AnalysisPage: React.FC = () => {
                                                                     investment-memo.md
                                                                 </p>
                                                                 <p className="text-[10px] text-slate-500">
-                                                                    {phases.phase5.memoResult
-                                                                        .metadata?.content_length
+                                                                    {phases
+                                                                        .phase5
+                                                                        .memoResult
+                                                                        .metadata
+                                                                        ?.content_length
                                                                         ? `${(
-                                                                              phases.phase5
-                                                                                  .memoResult.metadata
-                                                                                  .content_length / 1024
-                                                                          ).toFixed(1)} KB`
+                                                                              phases
+                                                                                  .phase5
+                                                                                  .memoResult
+                                                                                  .metadata
+                                                                                  .content_length /
+                                                                              1024
+                                                                          ).toFixed(
+                                                                              1
+                                                                          )} KB`
                                                                         : "Markdown format"}
                                                                 </p>
                                                             </div>
@@ -2050,8 +2062,11 @@ export const AnalysisPage: React.FC = () => {
                                                         <div className="flex gap-2">
                                                             <a
                                                                 href={`/api/v1/files/download?path=${encodeURIComponent(
-                                                                    phases.phase5.memoResult
-                                                                        .memo_file || ""
+                                                                    phases
+                                                                        .phase5
+                                                                        .memoResult
+                                                                        .memo_file ||
+                                                                        ""
                                                                 )}`}
                                                                 download
                                                                 className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
@@ -2062,10 +2077,14 @@ export const AnalysisPage: React.FC = () => {
                                                                 />
                                                                 Markdown
                                                             </a>
-                                                            {phases.phase5.memoResult.pdf_file && (
+                                                            {phases.phase5
+                                                                .memoResult
+                                                                .pdf_file && (
                                                                 <a
                                                                     href={`/api/v1/files/download?path=${encodeURIComponent(
-                                                                        phases.phase5.memoResult
+                                                                        phases
+                                                                            .phase5
+                                                                            .memoResult
                                                                             .pdf_file
                                                                     )}`}
                                                                     download
@@ -2073,7 +2092,9 @@ export const AnalysisPage: React.FC = () => {
                                                                 >
                                                                     <Icon
                                                                         icon="lucide:file-text"
-                                                                        width={12}
+                                                                        width={
+                                                                            12
+                                                                        }
                                                                     />
                                                                     PDF
                                                                 </a>
@@ -2105,7 +2126,9 @@ export const AnalysisPage: React.FC = () => {
                                                 </div>
                                                 <button
                                                     onClick={handleGenerateMemo}
-                                                    disabled={getTotalWeight() !== 100}
+                                                    disabled={
+                                                        getTotalWeight() !== 100
+                                                    }
                                                     className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     Retry
