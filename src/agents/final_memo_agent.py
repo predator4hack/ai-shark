@@ -294,21 +294,22 @@ Write a professional, balanced investment memo that appropriately weights each a
 def create_final_memo_agent(config: Optional[FinalMemoConfig] = None) -> FinalMemoAgent:
     """
     Factory function to create FinalMemoAgent instance
-    
+
     Args:
         config: Optional configuration for the agent
-        
+
     Returns:
         Configured FinalMemoAgent instance
     """
     try:
-        from src.utils.llm_setup import create_custom_llm
-        
+        from src.utils.llm_setup import create_text_llm
+
         # Get temperature from config
         temperature = config.temperature if config else 0.3
-        
-        # Create LLM with the specified temperature
-        llm = create_custom_llm(temperature=temperature)
+
+        # Create text LLM (Groq Llama 4 Scout) for cost-efficient memo generation
+        # This follows the hybrid LLM setup where Gemini is only used for vision tasks (Phase 1)
+        llm = create_text_llm(temperature=temperature)
         return FinalMemoAgent(llm=llm, config=config)
     except Exception as e:
         logger.warning(f"Failed to create LLM instance, using default: {e}")

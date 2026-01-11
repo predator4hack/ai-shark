@@ -46,5 +46,11 @@ def setup_logging():
     logging.getLogger('google').setLevel(logging.WARNING)
     logging.getLogger('urllib3').setLevel(logging.WARNING)
     logging.getLogger('PIL').setLevel(logging.WARNING)
-    
+
+    # Suppress verbose WeasyPrint and font-related library logs
+    logging.getLogger('weasyprint').setLevel(logging.WARNING)
+    logging.getLogger('fontTools').setLevel(logging.WARNING)
+    logging.getLogger('tinycss2').setLevel(logging.WARNING)
+    logging.getLogger('cssselect2').setLevel(logging.WARNING)
+
     logging.info("Logging configured successfully")
