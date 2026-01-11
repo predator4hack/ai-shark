@@ -2,6 +2,8 @@
 
 > A comprehensive multi-phase AI-powered pipeline for venture capital deal analysis, built with React, FastAPI, and Google Gemini LLM.
 
+**Application Link:** [https://ai-shark-880830089283.europe-west1.run.app/](https://ai-shark-880830089283.europe-west1.run.app/)
+
 ---
 
 ## Overview
