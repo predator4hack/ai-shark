@@ -31,20 +31,35 @@ class Settings:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = Path(os.getenv("LOG_FILE", "logs/app.log"))
     
-    # LLM Provider Configuration
+    # LLM Provider Configuration (Legacy - kept for backward compatibility)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")  # "google" or "groq"
 
-    # Gemini API Configuration
+    # Vision LLM Configuration (Phase 1 - Pitch Deck Processing)
+    # Configurable for A/B testing between Gemini and Groq Llama 4
+    VISION_PROVIDER: str = os.getenv("VISION_PROVIDER", "google")  # "google" or "groq"
+    VISION_MODEL_GOOGLE: str = os.getenv("VISION_MODEL_GOOGLE", "gemini-2.5-flash")
+    VISION_MODEL_GROQ: str = os.getenv("VISION_MODEL_GROQ", "meta-llama/llama-4-maverick-17b-128e-instruct")
+
+    # Text LLM Configuration (Phases 2-5 - Analysis, Q&A, Memo)
+    # Uses Llama 4 Scout for cost efficiency
+    TEXT_MODEL: str = os.getenv("TEXT_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+
+    # Fallback Configuration
+    # Uses Llama 4 Maverick as fallback (multimodal, affordable)
+    ENABLE_LLM_FALLBACK: bool = os.getenv("ENABLE_LLM_FALLBACK", "true").lower() == "true"
+    FALLBACK_MODEL: str = os.getenv("FALLBACK_MODEL", "meta-llama/llama-4-maverick-17b-128e-instruct")
+
+    # Gemini API Configuration (for vision when VISION_PROVIDER=google)
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     GEMINI_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
-    GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "100000"))  # Increased for comprehensive analysis
+    GEMINI_MAX_TOKENS: int = int(os.getenv("GEMINI_MAX_TOKENS", "100000"))
     GEMINI_RETRY_ATTEMPTS: int = int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3"))
     GEMINI_RETRY_DELAY: float = float(os.getenv("GEMINI_RETRY_DELAY", "1.0"))
 
     # Groq API Configuration
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama3-8b-8192")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
     GROQ_TEMPERATURE: float = float(os.getenv("GROQ_TEMPERATURE", "0.1"))
-    GROQ_MAX_TOKENS: int = int(os.getenv("GROQ_MAX_TOKENS", "100000"))  # Increased for comprehensive analysis
+    GROQ_MAX_TOKENS: int = int(os.getenv("GROQ_MAX_TOKENS", "100000"))
     GROQ_RETRY_ATTEMPTS: int = int(os.getenv("GROQ_RETRY_ATTEMPTS", "3"))
     GROQ_RETRY_DELAY: float = float(os.getenv("GROQ_RETRY_DELAY", "1.0"))
     

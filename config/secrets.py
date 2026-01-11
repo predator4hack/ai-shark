@@ -4,6 +4,11 @@ Secret management for Cloud Run mounted secrets with env var fallback.
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables early to ensure they're available
+# This is needed because this module may be imported before settings.py calls load_dotenv()
+load_dotenv()
 
 
 def get_secret(name: str, default: str = "") -> str:

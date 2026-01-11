@@ -3,6 +3,7 @@ Base Agent Architecture for Multi-Agent Startup Analysis System
 Task 4: Google AI LLM Integration and Base Agent
 
 Abstract base class for all analysis agents with common functionality.
+Uses Groq Llama 4 Scout for text tasks (cost-efficient) with automatic fallback.
 """
 
 import logging
@@ -16,7 +17,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser, JsonOutputParser
 from pydantic import BaseModel, ValidationError
 
-from src.utils.llm_setup import get_llm, get_llm_setup
+from src.utils.llm_setup import get_llm, get_llm_setup, create_text_llm
 from src.models.document_models import StartupDocument
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -57,13 +58,15 @@ class BaseAnalysisAgent(ABC):
 
         Args:
             agent_name: Name of the agent for logging
-            llm: Language model instance (uses default if None)
+            llm: Language model instance (uses text LLM - Llama 4 Scout - if None)
             output_model: Pydantic model for structured output
             temperature: Override default temperature
             max_retries: Maximum retry attempts for failed requests
         """
         self.agent_name = agent_name
-        self.llm = llm or get_llm()
+        # Use text LLM (Llama 4 Scout) by default for cost efficiency
+        # Falls back to Llama 4 Maverick on failure if enabled
+        self.llm = llm or self._get_text_llm()
         self.output_model = output_model
         self.max_retries = max_retries
         self.temperature = temperature
@@ -78,7 +81,18 @@ class BaseAnalysisAgent(ABC):
         if output_model:
             self.output_parser = PydanticOutputParser(pydantic_object=output_model)
 
-        logger.info(f"Initialized {agent_name} agent")
+        logger.info(f"Initialized {agent_name} agent with text LLM")
+
+    def _get_text_llm(self) -> BaseLanguageModel:
+        """
+        Get text LLM (Llama 4 Scout) for cost-efficient text processing.
+        Falls back to default LLM if text LLM creation fails.
+        """
+        try:
+            return create_text_llm()
+        except Exception as e:
+            logger.warning(f"Failed to create text LLM: {e}. Falling back to default LLM.")
+            return get_llm()
 
     @abstractmethod
     def get_system_prompt(self) -> str:

@@ -1,12 +1,14 @@
 """
 Unified LLM Manager for AI Shark
 Handles both direct Gemini API calls and LangChain integration
+Supports multi-LLM routing: Gemini for vision, Groq Llama 4 for text
 """
 
 import os
 import io
 import json
 import time
+import base64
 import functools
 import logging
 from typing import List, Dict, Any, Optional, Union
@@ -14,12 +16,15 @@ from PIL import Image
 import fitz  # PyMuPDF
 import google.generativeai as genai
 from dotenv import load_dotenv
+import httpx
 
-from config.secrets import get_google_api_key
+from config.secrets import get_google_api_key, get_groq_api_key
+from config.settings import settings
 
 # LangChain imports (for multi-agent system compatibility)
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_groq import ChatGroq
     from langchain_core.language_models import BaseLanguageModel
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -40,11 +45,26 @@ class LLMConnectionError(Exception):
 
 class LLMManager:
     """
-    Unified LLM Manager that supports both direct Gemini API and LangChain integration
+    Unified LLM Manager that supports both direct Gemini API and LangChain integration.
+    Supports multi-LLM routing:
+    - Vision tasks: Configurable between Gemini and Groq Llama 4 Maverick
+    - Text tasks: Groq Llama 4 Scout (cost-efficient)
+    - Fallback: Groq Llama 4 Maverick
     """
-    
+
     def __init__(self):
-        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        # Vision provider configuration (for A/B testing)
+        self.vision_provider = settings.VISION_PROVIDER.lower()
+        self.vision_model_google = settings.VISION_MODEL_GOOGLE
+        self.vision_model_groq = settings.VISION_MODEL_GROQ
+
+        # Text model configuration
+        self.text_model = settings.TEXT_MODEL
+        self.fallback_model = settings.FALLBACK_MODEL
+        self.enable_fallback = settings.ENABLE_LLM_FALLBACK
+
+        # Legacy Gemini config
+        self.gemini_model = settings.GEMINI_MODEL
         self.gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
         self.prompt_manager = PromptManager()
 
@@ -52,18 +72,31 @@ class LLMManager:
         env_value = os.getenv("USE_MOCK_LLM", "false")
         self.use_mock = env_value.lower() == "true"
 
-        logger.info(f"🔧 LLMManager initialization: USE_MOCK_LLM={env_value}, use_mock={self.use_mock}")
-
-        if not self.use_mock:
-            logger.info("⚠️  Real LLM mode - configuring Gemini API")
-            self._configure_gemini()
-        else:
-            logger.info("✅ Mock LLM mode enabled - skipping API configuration")
+        logger.info(f"🔧 LLMManager initialization:")
+        logger.info(f"   USE_MOCK_LLM={env_value}, use_mock={self.use_mock}")
+        logger.info(f"   Vision provider: {self.vision_provider}")
+        logger.info(f"   Text model: {self.text_model}")
+        logger.info(f"   Fallback enabled: {self.enable_fallback}")
 
         # For LangChain compatibility
         self.llm_instance: Optional[BaseLanguageModel] = None
         self.last_request_time = 0
         self.min_request_interval = 1.0
+
+        # Groq API client for vision and text tasks
+        self.groq_api_key = get_groq_api_key()
+        self.groq_base_url = "https://api.groq.com/openai/v1"
+
+        if not self.use_mock:
+            # Configure APIs based on providers
+            if self.vision_provider == "google":
+                logger.info("⚠️  Real LLM mode - configuring Gemini API for vision")
+                self._configure_gemini()
+
+            # Always configure Groq for text tasks
+            self._configure_groq()
+        else:
+            logger.info("✅ Mock LLM mode enabled - skipping API configuration")
     
     def _configure_gemini(self):
         """Configure the Gemini API with the key from environment variables or mounted secret"""
@@ -72,6 +105,13 @@ class LLMManager:
             raise ValueError("GOOGLE_API_KEY not found. Please set it in a .env file or mount as secret.")
         genai.configure(api_key=api_key)
         logger.info("Gemini API configured successfully")
+
+    def _configure_groq(self):
+        """Configure Groq API for text tasks and optionally vision"""
+        if not self.groq_api_key:
+            logger.warning("GROQ_API_KEY not found. Text tasks will fail without it.")
+        else:
+            logger.info("Groq API configured successfully")
     
     @staticmethod
     def retry_with_backoff(retries=5, backoff_in_seconds=5):
@@ -129,19 +169,18 @@ class LLMManager:
             return MOCK_METADATA
 
         try:
-            logger.info("Extracting metadata from pitch deck...")
-            model = genai.GenerativeModel(self.gemini_model)
+            logger.info(f"Extracting metadata from pitch deck using {self.vision_provider} provider...")
 
             # Get the metadata extraction prompt
             prompt = self.prompt_manager.format_prompt("metadata_extraction")
 
-            # Prepare content list [prompt, image1, image2, ...]
-            content = [prompt] + page_images
+            if self.vision_provider == "google":
+                response_text = self._extract_with_gemini_vision(prompt, page_images)
+            else:  # groq
+                response_text = self._extract_with_groq_vision(prompt, page_images)
 
-            response = model.generate_content(content)
-            print(f"Response: {response}")
             # Clean up the response to extract only the JSON part
-            cleaned_response = response.text.strip()
+            cleaned_response = response_text.strip()
 
             # Remove markdown code blocks if present
             if "```json" in cleaned_response:
@@ -160,9 +199,61 @@ class LLMManager:
 
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Error extracting metadata: {e}")
-            if 'response' in locals():
-                logger.debug(f"Model response was: {response.text}")
             return None
+
+    def _extract_with_gemini_vision(self, prompt: str, page_images: List[Image.Image]) -> str:
+        """Extract content using Gemini vision API"""
+        model = genai.GenerativeModel(self.vision_model_google)
+        content = [prompt] + page_images
+        response = model.generate_content(content)
+        logger.info(f"Gemini vision response received")
+        return response.text
+
+    def _extract_with_groq_vision(self, prompt: str, page_images: List[Image.Image]) -> str:
+        """Extract content using Groq vision API (Llama 4 Maverick)"""
+        # Convert PIL images to base64
+        image_contents = []
+        for img in page_images:
+            buffered = io.BytesIO()
+            img.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            image_contents.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{img_base64}"
+                }
+            })
+
+        # Build message with text and images
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *image_contents
+                ]
+            }
+        ]
+
+        # Call Groq API
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                f"{self.groq_base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": self.vision_model_groq,
+                    "messages": messages,
+                    "max_tokens": 8000,
+                    "temperature": 0.1
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"Groq vision response received")
+            return result["choices"][0]["message"]["content"]
     
     @retry_with_backoff()
     def extract_topic_data(self, topic: str, page_images: List[Image.Image]) -> str:
@@ -174,7 +265,7 @@ class LLMManager:
             return MOCK_TOPIC_CONTENT.get(topic, f"# {topic}\n\nMock content for {topic}")
 
         try:
-            model = genai.GenerativeModel(self.gemini_model)
+            logger.info(f"Extracting topic '{topic}' using {self.vision_provider} provider...")
 
             # Get the topic analysis prompt
             prompt = self.prompt_manager.format_prompt(
@@ -183,9 +274,10 @@ class LLMManager:
                 version="v2"
             )
 
-            content = [prompt] + page_images
-            response = model.generate_content(content)
-            return response.text
+            if self.vision_provider == "google":
+                return self._extract_with_gemini_vision(prompt, page_images)
+            else:  # groq
+                return self._extract_with_groq_vision(prompt, page_images)
 
         except Exception as e:
             logger.error(f"Error extracting topic data for '{topic}': {e}")
@@ -193,23 +285,74 @@ class LLMManager:
     
     @retry_with_backoff()
     def structure_document_content(self, text: str, filename: str) -> str:
-        """Use LLM to structure and clean up document content"""
+        """Use LLM to structure and clean up document content.
+        Uses text LLM (Llama 4 Scout) with fallback to Maverick.
+        """
         try:
-            model = genai.GenerativeModel(self.gemini_model)
-            
             # Get the document structuring prompt
             prompt = self.prompt_manager.format_prompt(
                 "document_structuring",
                 filename=filename,
                 content=text[:8000]  # Limit to avoid token limits
             )
-            
-            response = model.generate_content(prompt)
-            return response.text
-            
+
+            return self._invoke_text_llm(prompt)
+
         except Exception as e:
             logger.error(f"Error structuring document content: {e}")
             return text  # Return original text if LLM processing fails
+
+    def _invoke_text_llm(self, prompt: str, use_fallback: bool = True) -> str:
+        """Invoke text LLM (Llama 4 Scout) with optional fallback to Maverick"""
+        self._enforce_rate_limit()
+
+        try:
+            # Use Groq API for text tasks
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(
+                    f"{self.groq_base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.text_model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 8000,
+                        "temperature": 0.1
+                    }
+                )
+                response.raise_for_status()
+                result = response.json()
+                logger.info(f"Text LLM ({self.text_model}) response received")
+                return result["choices"][0]["message"]["content"]
+
+        except Exception as e:
+            if use_fallback and self.enable_fallback:
+                logger.warning(f"Primary text LLM failed: {e}. Falling back to {self.fallback_model}...")
+                return self._invoke_fallback_llm(prompt)
+            raise
+
+    def _invoke_fallback_llm(self, prompt: str) -> str:
+        """Invoke fallback LLM (Llama 4 Maverick)"""
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                f"{self.groq_base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": self.fallback_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 8000,
+                    "temperature": 0.1
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"Fallback LLM ({self.fallback_model}) response received")
+            return result["choices"][0]["message"]["content"]
     
     @retry_with_backoff()
     def generate_embeddings(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> List[float]:
@@ -356,11 +499,16 @@ class LLMManager:
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the current LLM configuration"""
         return {
-            "gemini_model": self.gemini_model,
+            "vision_provider": self.vision_provider,
+            "vision_model": self.vision_model_google if self.vision_provider == "google" else self.vision_model_groq,
+            "text_model": self.text_model,
+            "fallback_model": self.fallback_model,
+            "fallback_enabled": self.enable_fallback,
             "embedding_model": self.gemini_embedding_model,
             "langchain_available": LANGCHAIN_AVAILABLE,
             "rate_limit_interval": self.min_request_interval,
-            "api_configured": bool(os.getenv("GOOGLE_API_KEY"))
+            "google_api_configured": bool(get_google_api_key()),
+            "groq_api_configured": bool(self.groq_api_key)
         }
 
     def _get_mock_founder_responses(self) -> str:
@@ -413,7 +561,8 @@ MRR growth (currently $120K, growing 40% month-over-month), Net Revenue Retentio
     @retry_with_backoff()
     def generate_founder_responses(self, prompt: str) -> str:
         """
-        Generate founder responses for questionnaire simulation
+        Generate founder responses for questionnaire simulation.
+        Uses text LLM (Llama 4 Scout) with fallback to Maverick.
 
         Args:
             prompt: Formatted prompt for founder response simulation
@@ -427,19 +576,14 @@ MRR growth (currently $120K, growing 40% month-over-month), Net Revenue Retentio
             return self._get_mock_founder_responses()
 
         try:
-            logger.info("Generating founder responses using Gemini...")
+            logger.info(f"Generating founder responses using {self.text_model}...")
+            response = self._invoke_text_llm(prompt)
 
-            # Rate limiting
-            self._enforce_rate_limit()
-
-            model = genai.GenerativeModel(self.gemini_model)
-            response = model.generate_content(prompt)
-
-            if not response or not response.text:
-                raise LLMConnectionError("Empty response from Gemini API")
+            if not response:
+                raise LLMConnectionError("Empty response from LLM")
 
             logger.info("Successfully generated founder responses")
-            return response.text.strip()
+            return response.strip()
 
         except Exception as e:
             logger.error(f"Error generating founder responses: {e}")

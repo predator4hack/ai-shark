@@ -198,6 +198,55 @@ class LLMSetup:
             logger.error(f"Failed to create Groq LLM instance: {e}")
             raise LLMConnectionError(f"Failed to create Groq LLM: {e}")
 
+    def create_vision_llm(self, **kwargs) -> BaseLanguageModel:
+        """
+        Create LLM for vision tasks (Phase 1 - Pitch Deck Processing).
+        Uses configurable provider for A/B testing between Gemini and Groq Llama 4.
+        """
+        if settings.VISION_PROVIDER.lower() == "google":
+            logger.info(f"Creating Google vision LLM: {settings.VISION_MODEL_GOOGLE}")
+            return self._create_google_llm(model_name=settings.VISION_MODEL_GOOGLE, **kwargs)
+        else:  # groq
+            logger.info(f"Creating Groq vision LLM: {settings.VISION_MODEL_GROQ}")
+            return self._create_groq_llm(model_name=settings.VISION_MODEL_GROQ, **kwargs)
+
+    def create_text_llm(self, **kwargs) -> BaseLanguageModel:
+        """
+        Create LLM for text tasks (Phases 2-5).
+        Uses Llama 4 Scout on Groq for cost efficiency.
+        """
+        logger.info(f"Creating text LLM: {settings.TEXT_MODEL}")
+        return self._create_groq_llm(model_name=settings.TEXT_MODEL, **kwargs)
+
+    def create_fallback_llm(self, **kwargs) -> BaseLanguageModel:
+        """
+        Create fallback LLM (Llama 4 Maverick).
+        Used when primary LLM fails.
+        """
+        logger.info(f"Creating fallback LLM: {settings.FALLBACK_MODEL}")
+        return self._create_groq_llm(model_name=settings.FALLBACK_MODEL, **kwargs)
+
+    def invoke_text_with_fallback(self, prompt: str, **kwargs) -> str:
+        """
+        Invoke text LLM with automatic fallback to Llama 4 Maverick on failure.
+
+        Args:
+            prompt: Input prompt
+            **kwargs: Additional parameters for the model
+
+        Returns:
+            Model response as string
+        """
+        try:
+            llm = self.create_text_llm()
+            return self.invoke_with_retry(llm, prompt, **kwargs)
+        except Exception as e:
+            if settings.ENABLE_LLM_FALLBACK:
+                logger.warning(f"Primary text LLM failed: {e}. Falling back to {settings.FALLBACK_MODEL}...")
+                llm = self.create_fallback_llm()
+                return self.invoke_with_retry(llm, prompt, **kwargs)
+            raise
+
     def get_default_llm(self) -> BaseLanguageModel:
         """Get or create default LLM instance"""
         if self.llm is None:
@@ -357,6 +406,21 @@ def create_groq_llm(**kwargs) -> BaseLanguageModel:
 def create_google_llm(**kwargs) -> BaseLanguageModel:
     """Convenience function to create Google AI LLM instance"""
     return get_llm_setup().create_llm(provider="google", **kwargs)
+
+
+def create_vision_llm(**kwargs) -> BaseLanguageModel:
+    """Convenience function to create vision LLM (configurable provider)"""
+    return get_llm_setup().create_vision_llm(**kwargs)
+
+
+def create_text_llm(**kwargs) -> BaseLanguageModel:
+    """Convenience function to create text LLM (Llama 4 Scout)"""
+    return get_llm_setup().create_text_llm(**kwargs)
+
+
+def invoke_text_with_fallback(prompt: str, **kwargs) -> str:
+    """Convenience function to invoke text LLM with automatic fallback"""
+    return get_llm_setup().invoke_text_with_fallback(prompt, **kwargs)
 
 
 # Testing utilities

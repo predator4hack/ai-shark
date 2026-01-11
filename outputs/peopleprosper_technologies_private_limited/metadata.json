@@ -1,0 +1,65 @@
+{
+  "startup_name": "Peopleprosper Technologies Private Limited",
+  "sector": "Technology",
+  "sub_sector": "HR_and_Payroll_Software",
+  "website": null,
+  "table_of_contents": {
+    "Company_Overview": [
+      16
+    ],
+    "Team": [
+      23,
+      31,
+      38
+    ],
+    "Traction": [
+      35
+    ],
+    "Financials": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38
+    ]
+  },
+  "questionnaire": {
+    "generated": true,
+    "generated_at": "2026-01-11T05:56:21.550887",
+    "processing_time": 9.806731,
+    "markdown_file": "outputs/peopleprosper_technologies_private_limited/founders-checklist.md",
+    "agent": "QuestionnaireAgent",
+    "source_reports": [
+      "risk_analysis",
+      "business_analysis",
+      "tech_analysis",
+      "market_analysis"
+    ],
+    "total_reports": 4
+  },
+  "last_updated": "2026-01-11T05:56:21.551612",
+  "processing_status": {
+    "questionnaire_complete": true
+  }
+}
