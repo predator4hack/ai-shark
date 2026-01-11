@@ -15,12 +15,12 @@ services:
             - ./outputs:/app/outputs
             - ./tests:/app/tests
             - ./task_config.py:/app/task_config.py
+        env_file:
+            - .env
         environment:
+            # Override specific vars for dev environment
             - USE_GCS=false
             - OUTPUT_DIR=/app/outputs
-            - USE_MOCK_LLM=${USE_MOCK_LLM:-false}
-            - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
             - API_PORT=8000
         command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
         networks:

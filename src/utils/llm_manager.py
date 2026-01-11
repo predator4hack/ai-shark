@@ -174,10 +174,7 @@ class LLMManager:
             # Get the metadata extraction prompt
             prompt = self.prompt_manager.format_prompt("metadata_extraction")
 
-            if self.vision_provider == "google":
-                response_text = self._extract_with_gemini_vision(prompt, page_images)
-            else:  # groq
-                response_text = self._extract_with_groq_vision(prompt, page_images)
+            response_text = self._extract_vision_with_fallback(prompt, page_images)
 
             # Clean up the response to extract only the JSON part
             cleaned_response = response_text.strip()
@@ -200,6 +197,22 @@ class LLMManager:
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Error extracting metadata: {e}")
             return None
+
+    def _extract_vision_with_fallback(self, prompt: str, page_images: List[Image.Image]) -> str:
+        """
+        Extract content using vision LLM with automatic fallback.
+        Falls back to Groq Llama 4 Maverick if primary provider fails.
+        """
+        try:
+            if self.vision_provider == "google":
+                return self._extract_with_gemini_vision(prompt, page_images)
+            else:  # groq
+                return self._extract_with_groq_vision(prompt, page_images)
+        except Exception as e:
+            if self.enable_fallback:
+                logger.warning(f"Primary vision LLM ({self.vision_provider}) failed: {e}. Falling back to Groq Llama 4 Maverick...")
+                return self._extract_with_groq_vision(prompt, page_images)
+            raise
 
     def _extract_with_gemini_vision(self, prompt: str, page_images: List[Image.Image]) -> str:
         """Extract content using Gemini vision API"""
@@ -274,10 +287,7 @@ class LLMManager:
                 version="v2"
             )
 
-            if self.vision_provider == "google":
-                return self._extract_with_gemini_vision(prompt, page_images)
-            else:  # groq
-                return self._extract_with_groq_vision(prompt, page_images)
+            return self._extract_vision_with_fallback(prompt, page_images)
 
         except Exception as e:
             logger.error(f"Error extracting topic data for '{topic}': {e}")
