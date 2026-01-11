@@ -176,7 +176,8 @@ const analysisSlice = createSlice({
       state.phases.phase1.status = 'completed'
       state.phases.phase1.progressMessage = 'Pitch deck processed successfully'
       state.phases.phase1.result = { files: action.payload.files }
-      state.currentActivePhase = 2
+      // Skip Phase 2 (Additional Documents) - backend API not implemented yet
+      state.currentActivePhase = 3
     },
     setUploadError: (state, action: PayloadAction<string>) => {
       state.uploadStatus = 'failed'

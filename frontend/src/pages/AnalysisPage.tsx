@@ -12,7 +12,7 @@ import {
     updateAgentWeights,
     applyWeightTemplate,
     setSimulationMode,
-    removeDocument,
+    // removeDocument, // Commented out - used in Phase 2 (Additional Documents)
     setUploadJobId,
     updateUploadStatus,
     setUploadResult,
@@ -82,7 +82,7 @@ export const AnalysisPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const {
         metadata,
-        documents,
+        // documents, // Commented out - used in Phase 2 (Additional Documents)
         agentWeights,
         simulationMode,
         phases,
@@ -948,7 +948,7 @@ export const AnalysisPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* PHASE 2: Additional Documents */}
+                    {/* PHASE 2: Additional Documents - COMMENTED OUT (Backend API not implemented yet)
                     <div className="relative z-10">
                         <div className="phase-connector"></div>
 
@@ -1038,8 +1038,9 @@ export const AnalysisPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                    END PHASE 2 COMMENT */}
 
-                    {/* PHASE 3: Multi-Agent Analysis */}
+                    {/* PHASE 2: Multi-Agent Analysis (was Phase 3) */}
                     <div className="relative z-10">
                         <div className="phase-connector"></div>
 
@@ -1052,7 +1053,7 @@ export const AnalysisPage: React.FC = () => {
                                 {phases.phase3.status === "completed" ? (
                                     <Icon icon="lucide:check" width={20} />
                                 ) : (
-                                    "03"
+                                    "02"
                                 )}
                             </div>
 
@@ -1060,7 +1061,7 @@ export const AnalysisPage: React.FC = () => {
                                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                     <div>
                                         <h2 className="text-sm font-semibold text-slate-900">
-                                            3. Multi-Agent Analysis
+                                            2. Multi-Agent Analysis
                                         </h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             Specialized LLM agents analyze
@@ -1295,7 +1296,7 @@ export const AnalysisPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* PHASE 4: Founder Simulation */}
+                    {/* PHASE 3: Founder Simulation (was Phase 4) */}
                     <div className="relative z-10">
                         <div className="phase-connector"></div>
 
@@ -1308,7 +1309,7 @@ export const AnalysisPage: React.FC = () => {
                                 {phases.phase4.status === "completed" ? (
                                     <Icon icon="lucide:check" width={20} />
                                 ) : (
-                                    "04"
+                                    "03"
                                 )}
                             </div>
 
@@ -1316,7 +1317,7 @@ export const AnalysisPage: React.FC = () => {
                                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                     <div>
                                         <h2 className="text-sm font-semibold text-slate-900">
-                                            4. Data Curation
+                                            3. Data Curation
                                         </h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             Answer the questionnare document
@@ -1664,7 +1665,7 @@ export const AnalysisPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* PHASE 5: Final Investment Memo */}
+                    {/* PHASE 4: Final Investment Memo (was Phase 5) */}
                     <div className="relative z-10">
                         <div className="flex gap-6">
                             <div
@@ -1675,7 +1676,7 @@ export const AnalysisPage: React.FC = () => {
                                 {phases.phase5.status === "completed" ? (
                                     <Icon icon="lucide:check" width={20} />
                                 ) : (
-                                    "05"
+                                    "04"
                                 )}
                             </div>
 
@@ -1683,7 +1684,7 @@ export const AnalysisPage: React.FC = () => {
                                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                     <div>
                                         <h2 className="text-sm font-semibold text-slate-900">
-                                            5. Final Investment Memo
+                                            4. Final Investment Memo
                                         </h2>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             Synthesize findings and generate the
