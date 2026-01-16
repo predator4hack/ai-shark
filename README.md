@@ -92,8 +92,6 @@ USE_MOCK_LLM=true
 -   Performance testing without rate limits
 -   Demonstrating the platform to stakeholders
 
-See the [Mock Mode Documentation](#mock-mode-development) section below for detailed usage.
-
 ---
 
 ## Architecture Diagram
@@ -264,7 +262,7 @@ The application will be available at:
 Run all services (API, Frontend, and legacy Streamlit):
 
 ```bash
-docker-compose -f docker-compose.dev.yml up
+docker-compose -f docker-compose.yml up
 ```
 
 This starts:
@@ -476,24 +474,6 @@ docker build -f Dockerfile.prod -t ai-shark:latest .
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## Acknowledgments
-
--   **Google Gemini** for powering the AI analysis
--   **Material-UI** for the premium component library
--   **FastAPI** for the high-performance backend framework
--   **LangChain** for LLM orchestration
-
----
-
-## Contact & Support
-
-For questions, issues, or feature requests:
-
--   **GitHub Issues**: [Report a bug](https://github.com/yourusername/ai-shark/issues)
--   **Discussions**: [Join the discussion](https://github.com/yourusername/ai-shark/discussions)
 
 ---
 
