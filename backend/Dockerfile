@@ -1,23 +1,5 @@
-# Production Multi-stage Dockerfile - AI-Shark VC Document Analyzer
-# Stage 1: Build React Frontend
-FROM node:20-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-
-# Copy frontend package files
-COPY frontend/package*.json ./
-RUN npm install
-
-# Copy frontend source code
-COPY frontend/ ./
-
-# Build production React app
-RUN npm run build
-
-# Output: /app/frontend/dist
-
-# =============================================================================
-# Stage 2: Python Dependencies Builder
+# Production Backend-only Dockerfile - AI-Shark VC Document Analyzer
+# Stage 1: Python Dependencies Builder
 FROM python:3.11-slim AS python-builder
 
 # Install system dependencies required for building packages
@@ -43,7 +25,7 @@ COPY pyproject.toml ./
 RUN uv lock && uv sync --no-dev
 
 # =============================================================================
-# Stage 3: Production Runtime
+# Stage 2: Production Runtime
 FROM python:3.11-slim AS production
 
 # Install system dependencies for runtime
@@ -72,15 +54,11 @@ WORKDIR /app
 # Copy virtual environment from python-builder stage
 COPY --from=python-builder --chown=appuser:appuser /app/.venv /app/.venv
 
-# Copy application code
+# Copy application code (backend only)
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
-COPY --chown=appuser:appuser streamlit_ui.py ./
 COPY --chown=appuser:appuser task_config.py ./
 COPY --chown=appuser:appuser pyproject.toml ./
-
-# Copy React build from frontend-builder stage
-COPY --from=frontend-builder --chown=appuser:appuser /app/frontend/dist ./frontend/dist
 
 # Create outputs directory for file processing
 RUN mkdir -p /app/outputs && chown appuser:appuser /app/outputs
@@ -105,5 +83,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Run FastAPI (serves both API and React static files)
+# Run FastAPI backend only
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

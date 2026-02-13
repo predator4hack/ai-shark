@@ -4,19 +4,19 @@ services:
     # FastAPI Backend
     api:
         build:
-            context: .
+            context: ./backend
             dockerfile: Dockerfile.dev
         container_name: ai-shark-api-dev
         ports:
             - "8000:8000"
         volumes:
-            - ./src:/app/src
-            - ./config:/app/config
-            - ./outputs:/app/outputs
-            - ./tests:/app/tests
-            - ./task_config.py:/app/task_config.py
+            - ./backend/src:/app/src
+            - ./backend/config:/app/config
+            - ./backend/outputs:/app/outputs
+            - ./backend/tests:/app/tests
+            - ./backend/task_config.py:/app/task_config.py
         env_file:
-            - .env
+            - ./backend/.env
         environment:
             # Override specific vars for dev environment
             - USE_GCS=false
@@ -49,26 +49,6 @@ services:
         depends_on:
             - api
         restart: unless-stopped
-
-    # Streamlit (Legacy UI - for comparison)
-    # streamlit:
-    #   build:
-    #     context: .
-    #     dockerfile: Dockerfile
-    #   container_name: ai-shark-streamlit-dev
-    #   ports:
-    #     - "8501:8501"
-    #   volumes:
-    #     - ./src:/app/src
-    #     - ./outputs:/app/outputs
-    #     - ./streamlit_ui.py:/app/streamlit_ui.py
-    #   environment:
-    #     - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-    #     - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
-    #   command: streamlit run streamlit_ui.py --server.port=8501
-    #   networks:
-    #     - ai-shark-network
-    #   restart: unless-stopped
 
 networks:
     ai-shark-network:

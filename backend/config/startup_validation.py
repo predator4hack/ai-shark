@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 def validate_dependencies():
     """Validate that all required dependencies are available."""
     try:
-        import streamlit
         import google.generativeai
         import fitz  # PyMuPDF
         import pptx

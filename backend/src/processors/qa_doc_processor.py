@@ -7,7 +7,7 @@ Handles processing of direct Q&A documents for founder simulation
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .additional_doc_processor import AdditionalDocProcessor
 from ..models.founder_simulation_models import SimulationResult, QAEntry
@@ -60,12 +60,12 @@ class QADocProcessor:
         result['valid'] = True
         return result
     
-    def process_qa_document(self, uploaded_file: Any, company_dir: str) -> SimulationResult:
+    def process_qa_document(self, uploaded_file: str, company_dir: str) -> SimulationResult:
         """
         Process Q&A document and create founders-qa-responses.md
 
         Args:
-            uploaded_file: Uploaded file object from Streamlit OR file path string from API
+            uploaded_file: File path to Q&A document
             company_dir: Path to company directory
 
         Returns:
@@ -73,15 +73,9 @@ class QADocProcessor:
         """
         start_time = time.time()
 
-        # Handle both file objects (Streamlit) and file paths (FastAPI)
-        if isinstance(uploaded_file, str):
-            # File path from API
-            file_name = Path(uploaded_file).name
-            temp_file = uploaded_file
-        else:
-            # File object from Streamlit
-            file_name = uploaded_file.name
-            temp_file = self._save_temp_file(uploaded_file)
+        # File path from API
+        file_name = Path(uploaded_file).name
+        temp_file = uploaded_file
 
         print(f"\n📝 Processing Q&A document: {file_name}")
         print(f"Company Directory: {company_dir}")
@@ -157,12 +151,7 @@ class QADocProcessor:
                         error_message="Failed to save Q&A responses",
                         processing_time=processing_time
                     )
-                    
-            finally:
-                # Clean up temporary file only if we created it (not from API)
-                if not isinstance(uploaded_file, str) and os.path.exists(temp_file):
-                    os.unlink(temp_file)
-                    
+
         except Exception as e:
             return SimulationResult(
                 success=False,
@@ -304,19 +293,3 @@ class QADocProcessor:
         except Exception as e:
             print(f"Error saving Q&A responses: {e}")
             return False
-    
-    def _save_temp_file(self, uploaded_file: Any) -> str:
-        """
-        Save uploaded file to temporary location
-        
-        Args:
-            uploaded_file: Uploaded file object from Streamlit
-            
-        Returns:
-            Path to temporary file
-        """
-        import tempfile
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            return tmp_file.name

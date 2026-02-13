@@ -1,5 +1,5 @@
 # Project-specific exclusions
-# Keep only: src/, config/, streamlit_ui.py, task_config.py, pyproject.toml, .env
+# Keep only: src/, config/, task_config.py, pyproject.toml, .env
 
 # Exclude all directories except essential ones
 assets/

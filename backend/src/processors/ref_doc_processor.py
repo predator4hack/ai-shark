@@ -7,7 +7,7 @@ Handles processing of reference documents for founder simulation
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 
 from .additional_doc_processor import AdditionalDocProcessor
 from ..models.founder_simulation_models import SimulationResult, ProcessingStatus
@@ -62,14 +62,14 @@ class RefDocProcessor:
         result['valid'] = True
         return result
     
-    def process_reference_documents(self, uploaded_files: List[Any], company_dir: str) -> SimulationResult:
+    def process_reference_documents(self, uploaded_files: List[str], company_dir: str) -> SimulationResult:
         """
         Process multiple reference documents and store in ref-data directory
-        
+
         Args:
-            uploaded_files: List of uploaded file objects from Streamlit
+            uploaded_files: List of file paths to reference documents
             company_dir: Path to company directory
-            
+
         Returns:
             SimulationResult with processing status
         """
@@ -105,27 +105,28 @@ class RefDocProcessor:
         failed_files = []
         
         for i, uploaded_file in enumerate(uploaded_files):
-            print(f"\n📄 Processing {i+1}/{len(uploaded_files)}: {uploaded_file.name}")
-            
+            file_name = Path(uploaded_file).name
+            print(f"\n📄 Processing {i+1}/{len(uploaded_files)}: {file_name}")
+
             try:
                 result = self.extract_and_save_to_ref_data(uploaded_file, ref_data_dir)
                 results.append(result)
-                
+
                 if result['status'] == 'success':
                     successful_files.append(result['output_file'])
-                    print(f"✅ Successfully processed: {uploaded_file.name}")
+                    print(f"✅ Successfully processed: {file_name}")
                 else:
                     failed_files.append({
-                        'filename': uploaded_file.name,
+                        'filename': file_name,
                         'error': result.get('error', 'Unknown error')
                     })
-                    print(f"❌ Failed to process: {uploaded_file.name} - {result.get('error')}")
-                    
+                    print(f"❌ Failed to process: {file_name} - {result.get('error')}")
+
             except Exception as e:
-                error_msg = f"Unexpected error processing {uploaded_file.name}: {e}"
+                error_msg = f"Unexpected error processing {file_name}: {e}"
                 print(f"❌ {error_msg}")
                 failed_files.append({
-                    'filename': uploaded_file.name,
+                    'filename': file_name,
                     'error': str(e)
                 })
         
@@ -159,34 +160,32 @@ class RefDocProcessor:
             metadata=metadata
         )
     
-    def extract_and_save_to_ref_data(self, uploaded_file: Any, ref_data_dir: str) -> Dict[str, Any]:
+    def extract_and_save_to_ref_data(self, uploaded_file: str, ref_data_dir: str) -> Dict[str, Any]:
         """
         Extract content from uploaded file and save to ref-data directory
-        
+
         Args:
-            uploaded_file: Uploaded file object from Streamlit
+            uploaded_file: File path to reference document
             ref_data_dir: Path to ref-data directory
-            
+
         Returns:
             Processing result dictionary
         """
         try:
-            # Save uploaded file temporarily
-            temp_file = self._save_temp_file(uploaded_file)
-            
-            try:
-                # Extract text content using existing processor
-                text_content = self.additional_doc_processor._extract_text(temp_file)
-                
-                if not text_content or not text_content.strip():
-                    return {
-                        'status': 'error',
-                        'filename': uploaded_file.name,
-                        'error': 'Could not extract text content from the document'
-                    }
-                
-                # Generate output filename
-                sanitized_name = sanitize_filename(uploaded_file.name)
+            file_name = Path(uploaded_file).name
+
+            # Extract text content using existing processor
+            text_content = self.additional_doc_processor._extract_text(uploaded_file)
+
+            if not text_content or not text_content.strip():
+                return {
+                    'status': 'error',
+                    'filename': file_name,
+                    'error': 'Could not extract text content from the document'
+                }
+
+            # Generate output filename
+            sanitized_name = sanitize_filename(file_name)
                 
                 # Check if document is founder checklist related and rename accordingly
                 sanitized_name_lower = sanitized_name.lower()
@@ -198,18 +197,18 @@ class RefDocProcessor:
                 
                 # Convert to markdown format
                 markdown_content = self._convert_to_reference_markdown(
-                    text_content, 
-                    uploaded_file.name,
+                    text_content,
+                    file_name,
                     sanitized_name
                 )
-                
+
                 # Save to ref-data directory
                 success = OutputManager.save_file(markdown_content, str(output_path))
-                
+
                 if success:
                     return {
                         'status': 'success',
-                        'filename': uploaded_file.name,
+                        'filename': file_name,
                         'output_file': str(output_path),
                         'content_length': len(text_content),
                         'word_count': len(text_content.split())
@@ -217,37 +216,16 @@ class RefDocProcessor:
                 else:
                     return {
                         'status': 'error',
-                        'filename': uploaded_file.name,
+                        'filename': file_name,
                         'error': 'Failed to save processed content'
                     }
-                    
-            finally:
-                # Clean up temporary file
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
-                    
+
         except Exception as e:
             return {
                 'status': 'error',
-                'filename': uploaded_file.name,
+                'filename': file_name,
                 'error': str(e)
             }
-    
-    def _save_temp_file(self, uploaded_file: Any) -> str:
-        """
-        Save uploaded file to temporary location
-        
-        Args:
-            uploaded_file: Uploaded file object from Streamlit
-            
-        Returns:
-            Path to temporary file
-        """
-        import tempfile
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded_file.name).suffix) as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            return tmp_file.name
     
     def _convert_to_reference_markdown(self, content: str, original_filename: str, sanitized_name: str) -> str:
         """

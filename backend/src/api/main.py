@@ -1,9 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 import os
-from pathlib import Path
 
 from .routers import documents, jobs, files, analysis
 
@@ -14,13 +11,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration for React development
+# CORS configuration
+# Get frontend URL from environment (for production deployment)
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Build allowed origins list
+allowed_origins = [
+    "http://localhost:3000",  # React dev server
+    "http://localhost:5173",  # Vite default port
+]
+
+# Add production frontend if different from dev URLs
+if frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite default port
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,24 +62,6 @@ async def api_root():
             "run_analysis": "/api/v1/analysis/run-agents"
         }
     }
-
-
-# Serve React static files (production only)
-# In production, frontend/dist will exist from build
-frontend_dist = Path("frontend/dist")
-if frontend_dist.exists():
-    # Mount static assets
-    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
-
-    # Catch-all route for React Router (SPA)
-    @app.get("/{full_path:path}")
-    async def serve_react(full_path: str):
-        # Don't interfere with API routes
-        if full_path.startswith("api/"):
-            return {"error": "Not found"}, 404
-
-        # Serve index.html for all other routes (React Router handles routing)
-        return FileResponse(str(frontend_dist / "index.html"))
 
 
 if __name__ == "__main__":

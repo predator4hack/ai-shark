@@ -180,6 +180,26 @@ The platform uses a **hybrid storage approach**:
 
 ---
 
+## Project Structure
+
+The project is organized into separate frontend and backend directories for independent deployment:
+
+```text
+ai-shark/
+├── backend/          # FastAPI backend (deployed to Google Cloud Run)
+│   ├── src/          # Application source code
+│   ├── config/       # Configuration files
+│   ├── tests/        # Backend tests
+│   ├── Dockerfile    # Production build
+│   └── .env.example  # Environment template
+├── frontend/         # React frontend (deployed to Vercel)
+│   ├── src/          # React components and logic
+│   ├── public/       # Static assets
+│   ├── Dockerfile    # Frontend production build
+│   └── .env.example  # Frontend environment template
+└── docker-compose.yml # Local development orchestration
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -187,7 +207,7 @@ The platform uses a **hybrid storage approach**:
 -   **Node.js** 18+ and npm
 -   **Python** 3.11+
 -   **Docker** and **Docker Compose** (optional)
--   **Google Cloud SDK** (for production deployment)
+-   **Google Cloud SDK** (for backend deployment)
 -   **Google API Key** for Gemini LLM
 
 ### Installation
@@ -199,15 +219,14 @@ git clone https://github.com/yourusername/ai-shark.git
 cd ai-shark
 ```
 
-#### 2. Environment Setup
-
-Create a `.env` file in the project root:
+#### 2. Backend Environment Setup
 
 ```bash
+cd backend
 cp .env.example .env
 ```
 
-Edit `.env` and add your Google API key:
+Edit `backend/.env` and add your Google API key:
 
 ```env
 # LLM Configuration
@@ -225,9 +244,24 @@ API_PORT=8000
 MAX_FILE_SIZE_MB=100
 ```
 
-#### 3. Backend Setup
+#### 3. Frontend Environment Setup
 
 ```bash
+cd frontend
+cp .env.example .env
+```
+
+Edit `frontend/.env` for development:
+
+```env
+VITE_API_URL=/api
+```
+
+#### 4. Backend Setup
+
+```bash
+cd backend
+
 # Install Python dependencies
 pip install -e .
 
@@ -235,7 +269,7 @@ pip install -e .
 uvicorn src.api.main:app --reload --port 8000
 ```
 
-#### 4. Frontend Setup
+#### 5. Frontend Setup
 
 ```bash
 cd frontend
@@ -259,40 +293,53 @@ The application will be available at:
 
 ### Development with Docker Compose
 
-Run all services (API, Frontend, and legacy Streamlit):
+Run all services (API and Frontend):
 
 ```bash
-docker-compose -f docker-compose.yml up
+docker-compose up
 ```
 
 This starts:
 
 -   **FastAPI**: http://localhost:8000
 -   **React Frontend**: http://localhost:3000
--   **Streamlit UI** (legacy): http://localhost:8501
 
 ### Production Build
 
-Build and run the production container:
+#### Backend Production Build
 
 ```bash
-# Build multi-stage Docker image
-docker build -f Dockerfile.prod -t ai-shark:latest .
+cd backend
 
-# Run production container
+# Build backend Docker image
+docker build -t ai-shark-backend:latest .
+
+# Run backend container
 docker run -p 8080:8080 \
   -e USE_GCS=false \
   -e GOOGLE_API_KEY=your_key_here \
-  ai-shark:latest
+  ai-shark-backend:latest
 ```
 
-Access the application at http://localhost:8080
+#### Frontend Production Build
+
+```bash
+cd frontend
+
+# Build frontend Docker image
+docker build -t ai-shark-frontend:latest .
+
+# Run frontend container
+docker run -p 3000:80 ai-shark-frontend:latest
+```
 
 ---
 
-## Cloud Deployment (Google Cloud Run)
+## Cloud Deployment
 
-### 1. Create GCS Bucket
+### Backend Deployment (Google Cloud Run)
+
+#### 1. Create GCS Bucket
 
 ```bash
 gcloud storage buckets create gs://ai-shark-outputs \
@@ -300,10 +347,12 @@ gcloud storage buckets create gs://ai-shark-outputs \
   --uniform-bucket-level-access
 ```
 
-### 2. Deploy to Cloud Run
+#### 2. Deploy Backend to Cloud Run
 
 ```bash
-gcloud run deploy ai-shark \
+cd backend
+
+gcloud run deploy ai-shark-backend \
   --source . \
   --region us-central1 \
   --platform managed \
@@ -316,11 +365,33 @@ gcloud run deploy ai-shark \
   --max-instances 1
 ```
 
-### 3. Access Your Deployment
+#### 3. Get Backend URL
 
 ```bash
-gcloud run services describe ai-shark --region us-central1 --format='value(status.url)'
+gcloud run services describe ai-shark-backend --region us-central1 --format='value(status.url)'
 ```
+
+### Frontend Deployment (Vercel)
+
+#### 1. Install Vercel CLI
+
+```bash
+npm i -g vercel
+```
+
+#### 2. Deploy Frontend
+
+```bash
+cd frontend
+
+# Set your backend URL from Cloud Run deployment
+echo "VITE_API_URL=https://your-backend-url.run.app/api" > .env.production
+
+# Deploy to Vercel
+vercel --prod
+```
+
+The frontend will automatically be deployed to Vercel with optimized builds and CDN distribution.
 
 ---
 
