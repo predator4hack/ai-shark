@@ -1,6 +1,6 @@
 """
 Persistent job tracking for async processing.
-Stores job status, progress messages, and results in GCS/local storage.
+Stores job status, progress messages, and results in GCS/local storage and Firestore.
 """
 
 from datetime import datetime
@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel
 import uuid
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +34,23 @@ class Job(BaseModel):
 
 class JobManager:
     """
-    Persistent job store using GCS/local storage.
+    Persistent job store using GCS/local storage and Firestore.
     Jobs stored as JSON files at: _jobs/{job_id}.json
+    And optionally in Firestore for better querying.
     """
     JOB_PREFIX = "_jobs"
 
-    def __init__(self, storage):
+    def __init__(self, storage, firestore_db=None):
         """
-        Initialize JobManager with a storage backend.
+        Initialize JobManager with storage and optional Firestore backend.
 
         Args:
             storage: StorageManager instance (supports both local and GCS)
+            firestore_db: FirestoreManager instance (optional)
         """
         self.storage = storage
+        self.firestore_db = firestore_db
+        self.use_firestore = firestore_db and firestore_db.enabled
 
     def _job_path(self, job_id: str) -> str:
         """Get the storage path for a job."""
@@ -65,8 +70,17 @@ class JobManager:
             company_name=company_name
         )
 
-        # Persist to storage
+        # Persist to storage (file-based)
         self._save_job(job)
+
+        # Also save to Firestore if enabled
+        if self.use_firestore:
+            try:
+                self.firestore_db.save_job(job.model_dump(mode='json'))
+                logger.info(f"Created job {job_id} in Firestore")
+            except Exception as e:
+                logger.warning(f"Failed to save job to Firestore: {e}")
+
         logger.info(f"Created job {job_id} in persistent storage")
         return job_id
 
@@ -102,12 +116,40 @@ class JobManager:
         if error is not None:
             job.error = error
 
-        # Persist changes
+        # Persist changes to file storage
         self._save_job(job)
+
+        # Also update in Firestore if enabled
+        if self.use_firestore:
+            try:
+                updates = {
+                    "status": status.value,
+                    "progress_message": progress_message,
+                    "updated_at": datetime.utcnow()
+                }
+                if result is not None:
+                    updates["result"] = result
+                if error is not None:
+                    updates["error"] = error
+
+                self.firestore_db.update_job(job_id, updates)
+            except Exception as e:
+                logger.warning(f"Failed to update job in Firestore: {e}")
+
         logger.debug(f"Updated job {job_id}: {status.value} - {progress_message}")
 
     def get_job(self, job_id: str) -> Optional[Job]:
-        """Get job by ID from persistent storage"""
+        """Get job by ID from persistent storage (try Firestore first, then file storage)"""
+        # Try Firestore first if enabled
+        if self.use_firestore:
+            try:
+                job_data = self.firestore_db.get_job(job_id)
+                if job_data:
+                    return Job(**job_data)
+            except Exception as e:
+                logger.debug(f"Failed to get job from Firestore: {e}")
+
+        # Fallback to file-based storage
         try:
             data = self.storage.read_file(self._job_path(job_id))
             return Job.model_validate_json(data)
@@ -138,7 +180,8 @@ class JobManager:
             logger.error(f"Failed to cleanup old jobs: {e}")
 
 
-# Import storage and create global instance
+# Import storage and firestore, create global instance
 from src.api.services.storage_manager import storage
+from src.api.services.firestore_manager import firestore_db
 
-job_manager = JobManager(storage)
+job_manager = JobManager(storage, firestore_db)

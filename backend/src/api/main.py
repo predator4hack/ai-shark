@@ -1,8 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-from .routers import documents, jobs, files, analysis
+from .routers import documents, jobs, files, analysis, cache
 
 # Create FastAPI app
 app = FastAPI(
@@ -38,6 +41,7 @@ app.include_router(documents.router)
 app.include_router(jobs.router)
 app.include_router(files.router)
 app.include_router(analysis.router)
+app.include_router(cache.router)
 
 
 # Health check
@@ -59,7 +63,9 @@ async def api_root():
             "job_status": "/api/v1/jobs/{job_id}/status",
             "file_download": "/api/v1/files/download/{company_name}/{file_path}",
             "discover_agents": "/api/v1/analysis/discover-agents",
-            "run_analysis": "/api/v1/analysis/run-agents"
+            "run_analysis": "/api/v1/analysis/run-agents",
+            "cache_status": "/api/v1/cache/status",
+            "invalidate_cache": "/api/v1/cache/invalidate"
         }
     }
 

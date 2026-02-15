@@ -26,6 +26,7 @@ import os
 import json
 import inspect
 import importlib
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -41,6 +42,7 @@ from ..utils.llm_setup import get_llm, create_mock_llm, get_llm_setup
 from ..models.document_models import StartupDocument, DocumentMetadata, ParsedContent
 from ..models.analysis_models import BusinessAnalysis, MarketAnalysis
 from config.settings import settings
+from ..api.services.firestore_manager import firestore_db
 
 class AnalysisPipeline:
     """
@@ -66,17 +68,24 @@ class AnalysisPipeline:
         # Initialize components
         self.document_loader = DirectoryLoader()
         self.markdown_parser = MarkdownParser()
-        
+
+        # Initialize Firestore
+        self.firestore_db = firestore_db
+        self.use_firestore = firestore_db.enabled
+
         # Discover and initialize all available agents
         self.available_agents = self.discover_available_agents()
         self.agents = self._initialize_agents()
-        
+
         print(f"🤖 LLM Mode: {'Real API' if use_real_llm else 'Mock/Demo'}")
         if use_real_llm:
             print(f"🤖 Using real LLM: {get_llm_setup().get_model_info()}")
         else:
             print("🤖 Using Mock LLM for demonstration")
-        
+
+        if self.use_firestore:
+            print("🔥 Firestore caching enabled")
+
         print(f"📊 Discovered {len(self.agents)} analysis agents: {list(self.agents.keys())}")
         print(f"📁 Company directory: {self.company_dir}")
         print(f"📁 Analysis output directory: {self.analysis_dir}")
@@ -295,8 +304,47 @@ class AnalysisPipeline:
         result = "\n".join(concatenated_content)
         print(f"\n✅ Successfully concatenated {len(additional_files)} additional documents")
         print(f"📊 Total additional content: {len(result):,} characters")
-        
+
         return result
+
+    def _load_metadata(self) -> Dict[str, Any]:
+        """
+        Load metadata.json from company directory
+
+        Returns:
+            Metadata dictionary
+        """
+        metadata_path = self.company_dir / "metadata.json"
+        if not metadata_path.exists():
+            return {}
+
+        try:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to load metadata: {e}")
+            return {}
+
+    def _calculate_source_hashes(self) -> Dict[str, str]:
+        """
+        Calculate SHA-256 hashes of source documents for cache validation
+
+        Returns:
+            Dictionary with content hashes
+        """
+        hashes = {}
+
+        pitch_deck_path = self.company_dir / "pitch_deck.md"
+        if pitch_deck_path.exists():
+            content = pitch_deck_path.read_text(encoding='utf-8')
+            hashes['pitch_deck_hash'] = hashlib.sha256(content.encode()).hexdigest()
+
+        public_data_path = self.company_dir / "public_data.md"
+        if public_data_path.exists():
+            content = public_data_path.read_text(encoding='utf-8')
+            hashes['public_data_hash'] = hashlib.sha256(content.encode()).hexdigest()
+
+        return hashes
 
     def run_all_agents_analysis(self) -> Dict[str, Any]:
         """
@@ -426,6 +474,66 @@ class AnalysisPipeline:
 
         print(f"✅ Running with {len(valid_selected_agents)} valid agents: {', '.join(valid_selected_agents)}")
 
+        # Firestore caching logic
+        company_id = None
+        agents_to_run = valid_selected_agents
+        cached_results = {}
+
+        if self.use_firestore:
+            try:
+                # Load metadata to get website URL
+                metadata = self._load_metadata()
+                website = metadata.get('website')
+
+                if website:
+                    print(f"\n🔍 Checking Firestore for existing analyses (website: {website})")
+
+                    # Get or create company in Firestore
+                    company = self.firestore_db.get_company_by_url(website)
+                    if not company:
+                        print(f"✨ Creating new company in Firestore")
+                        company_id = self.firestore_db.save_company({
+                            "company_name": metadata.get('startup_name', ''),
+                            "website": website,
+                            "sector": metadata.get('sector', ''),
+                            "sub_sector": metadata.get('sub_sector', ''),
+                            "table_of_contents": metadata.get('table_of_contents', {})
+                        })
+                    else:
+                        company_id = company['company_id']
+                        print(f"📦 Found existing company (ID: {company_id})")
+
+                        # Calculate current source hashes
+                        current_hashes = self._calculate_source_hashes()
+
+                        # Determine which agents need to run
+                        agents_to_run = self.firestore_db.get_required_agents(company_id, valid_selected_agents)
+
+                        # Load cached analyses for agents we can skip
+                        for agent_type in valid_selected_agents:
+                            if agent_type not in agents_to_run:
+                                cached = self.firestore_db.get_analysis(company_id, agent_type)
+                                if cached:
+                                    cached_results[agent_type] = {
+                                        "agent_name": cached['agent_name'],
+                                        "markdown_analysis": cached['markdown_analysis'],
+                                        "processing_time": 0,  # Cached
+                                        "analysis_type": f"{agent_type}_analysis",
+                                        "cached": True
+                                    }
+                                    print(f"   ✅ Cache HIT: {agent_type} analysis (using cached version)")
+
+                    print(f"\n📊 Cache Summary:")
+                    print(f"   📦 Cached: {len(cached_results)} agents")
+                    print(f"   🔄 To run: {len(agents_to_run)} agents")
+                else:
+                    print("⚠️ No website URL in metadata, skipping Firestore caching")
+            except Exception as e:
+                print(f"⚠️ Firestore caching failed: {e}")
+                print("   Continuing with normal execution...")
+                agents_to_run = valid_selected_agents
+                cached_results = {}
+
         # Load all documents
         documents = self.load_documents()
         additional_content = self.load_additional_documents()
@@ -458,10 +566,11 @@ class AnalysisPipeline:
         if not pitch_deck_content:
             raise ValueError("Pitch deck content is required for analysis")
 
-        all_results = {}
+        all_results = {**cached_results}  # Start with cached results
+        fresh_results = {}
 
-        # Run analysis only with selected agents
-        for agent_type in valid_selected_agents:
+        # Run analysis only with agents that need to run
+        for agent_type in agents_to_run:
             agent = self.agents[agent_type]
             try:
                 print(f"\n🤖 Running {agent_type} analysis...")
@@ -484,15 +593,32 @@ class AnalysisPipeline:
                 processing_time = datetime.now() - start_time
 
                 # Store results
-                all_results[agent_type] = {
+                result_data = {
                     "agent_name": agent.agent_name,
                     "markdown_analysis": markdown_analysis,
                     "processing_time": processing_time.total_seconds(),
                     "analysis_type": f"{agent_type}_analysis"
                 }
 
+                fresh_results[agent_type] = result_data
+                all_results[agent_type] = result_data
+
                 print(f"   ✅ {agent_type} analysis completed in {processing_time.total_seconds():.2f}s")
                 print(f"   📝 Generated report: {len(markdown_analysis)} characters")
+
+                # Save to Firestore if enabled and we have a company_id
+                if self.use_firestore and company_id:
+                    try:
+                        current_hashes = self._calculate_source_hashes()
+                        self.firestore_db.save_analysis(company_id, agent_type, {
+                            "markdown_analysis": markdown_analysis,
+                            "agent_name": agent.agent_name,
+                            "processing_time": processing_time.total_seconds(),
+                            "source_hashes": current_hashes
+                        })
+                        print(f"   💾 Saved to Firestore")
+                    except Exception as e:
+                        print(f"   ⚠️ Failed to save to Firestore: {e}")
 
             except Exception as e:
                 print(f"   ❌ {agent_type} analysis failed: {e}")

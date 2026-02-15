@@ -33,3 +33,6 @@ frontend/.env.production
 # Misc
 .kiro
 logs/*
+
+
+backend/firebase-credentials.json

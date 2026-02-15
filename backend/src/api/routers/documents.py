@@ -7,6 +7,7 @@ import time
 from ..schemas.document import PitchDeckUploadResponse, PitchDeckResult
 from ..services.job_manager import job_manager, JobStatus
 from ..services.storage_manager import storage
+from ..services.firestore_manager import firestore_db
 from src.processors.pitch_deck_processor import PitchDeckProcessor
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
@@ -87,6 +88,38 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
         metadata['sanitized_company_name'] = company_name
         if 'startup_name' in metadata:
             metadata['raw_startup_name'] = metadata['startup_name']
+
+        # Save to Firestore if enabled
+        if firestore_db.enabled:
+            try:
+                website = metadata.get('website', '')
+                if website:
+                    # Create/update company in Firestore
+                    company_id = firestore_db.save_company({
+                        "company_name": metadata.get('startup_name', company_name),
+                        "website": website,
+                        "sector": metadata.get('sector', ''),
+                        "sub_sector": metadata.get('sub_sector', ''),
+                        "table_of_contents": metadata.get('table_of_contents', {})
+                    })
+
+                    # Save pitch deck content to Firestore
+                    pitch_deck_path = f"{company_name}/pitch_deck.md"
+                    if pitch_deck_path in files_created:
+                        # Read the content from storage
+                        content = storage.read_file(pitch_deck_path).decode('utf-8')
+
+                        firestore_db.save_source_document(company_id, 'pitch_deck', content, {
+                            "total_pages": metadata.get('total_pages'),
+                            "original_filename": metadata.get('original_filename', ''),
+                            "file_extension": metadata.get('file_extension', '')
+                        })
+                        print(f"✅ Saved pitch deck to Firestore for company {company_id}")
+                else:
+                    print("⚠️ No website URL in metadata, skipping Firestore save")
+            except Exception as e:
+                print(f"⚠️ Failed to save to Firestore: {e}")
+                # Don't fail the entire process if Firestore save fails
 
         job_manager.update_status(
             job_id,
