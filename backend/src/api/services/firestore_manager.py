@@ -342,6 +342,134 @@ class FirestoreBackend(DatabaseBackend):
 
         return agents_to_run
 
+    def _calculate_agents_hash(self, agent_types: List[str]) -> str:
+        """
+        Generate deterministic hash from sorted agent list
+
+        Args:
+            agent_types: List of agent type identifiers
+
+        Returns:
+            16-character SHA-256 hash of sorted, comma-joined agent types
+        """
+        # Sort agents to ensure deterministic hash
+        sorted_agents = sorted(agent_types)
+        agents_string = ','.join(sorted_agents)
+        return hashlib.sha256(agents_string.encode()).hexdigest()[:16]
+
+    def save_questionnaire(self, company_id: str, agents: List[str],
+                          questionnaire_data: Dict) -> str:
+        """
+        Save questionnaire to Firestore with agent combination hash
+
+        Args:
+            company_id: Company identifier
+            agents: List of agent types used for generation
+            questionnaire_data: {
+                "content": str (markdown content),
+                "processing_time": float,
+                "source_hashes": {...},
+                "metadata": {...}
+            }
+
+        Returns:
+            agents_hash used as document ID
+        """
+        agents_hash = self._calculate_agents_hash(agents)
+
+        questionnaire_ref = (self.companies.document(company_id)
+                            .collection('questionnaires')
+                            .document(agents_hash))
+
+        questionnaire_ref.set({
+            'agents_hash': agents_hash,
+            'generated_from_agents': sorted(agents),
+            'content': questionnaire_data['content'],
+            'processing_time': questionnaire_data.get('processing_time', 0),
+            'source_hashes': questionnaire_data.get('source_hashes', {}),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'metadata': questionnaire_data.get('metadata', {})
+        })
+
+        # Update company processing status
+        self.companies.document(company_id).update({
+            'processing_status.questionnaire_generated': True,
+            'processing_status.questionnaire_agents_hash': agents_hash,
+            'last_questionnaire_at': firestore.SERVER_TIMESTAMP,
+            'updated_at': firestore.SERVER_TIMESTAMP
+        })
+
+        print(f"✅ Saved questionnaire for company {company_id} (hash: {agents_hash})")
+        return agents_hash
+
+    def get_questionnaire(self, company_id: str, agents: List[str]) -> Optional[Dict]:
+        """
+        Get cached questionnaire for specific agent combination
+
+        Args:
+            company_id: Company identifier
+            agents: List of agent types
+
+        Returns:
+            Questionnaire data dict or None if not found
+        """
+        agents_hash = self._calculate_agents_hash(agents)
+
+        questionnaire_ref = (self.companies.document(company_id)
+                            .collection('questionnaires')
+                            .document(agents_hash))
+        doc = questionnaire_ref.get()
+
+        if doc.exists:
+            data = doc.to_dict()
+            data['agents_hash'] = agents_hash
+            return data
+        return None
+
+    def check_questionnaire_valid(self, company_id: str, agents: List[str],
+                                  current_source_hashes: Dict) -> bool:
+        """
+        Check if cached questionnaire is still valid
+
+        Validates:
+        1. Questionnaire exists for this agent combination
+        2. Source documents haven't changed (hash comparison)
+
+        Args:
+            company_id: Company identifier
+            agents: List of agent types
+            current_source_hashes: Current hashes of pitch_deck and public_data
+
+        Returns:
+            True if cached questionnaire is valid and can be reused
+        """
+        questionnaire = self.get_questionnaire(company_id, agents)
+
+        if not questionnaire:
+            print(f"   Cache MISS: No questionnaire for agents {sorted(agents)}")
+            return False
+
+        # Validate agent list matches
+        cached_agents = set(questionnaire.get('generated_from_agents', []))
+        requested_agents = set(agents)
+
+        if cached_agents != requested_agents:
+            print(f"   Cache MISS: Agent mismatch (cached: {cached_agents}, requested: {requested_agents})")
+            return False
+
+        # Compare source hashes
+        cached_hashes = questionnaire.get('source_hashes', {})
+
+        for key, current_hash in current_source_hashes.items():
+            if cached_hashes.get(key) != current_hash:
+                print(f"   Cache INVALIDATED: {key} changed")
+                print(f"      Cached: {cached_hashes.get(key, 'N/A')[:8]}...")
+                print(f"      Current: {current_hash[:8]}...")
+                return False
+
+        print(f"   ✅ Cache HIT: Valid questionnaire found (agents: {sorted(agents)})")
+        return True
+
     def update_processing_status(self, company_id: str,
                                 status_updates: Dict) -> None:
         """
@@ -518,6 +646,23 @@ class FirestoreManager:
         if not self.enabled:
             return
         return self.backend.update_job(job_id, updates)
+
+    def save_questionnaire(self, company_id: str, agents: List[str],
+                          questionnaire_data: Dict) -> str:
+        if not self.enabled:
+            raise RuntimeError("Firestore is not enabled")
+        return self.backend.save_questionnaire(company_id, agents, questionnaire_data)
+
+    def get_questionnaire(self, company_id: str, agents: List[str]) -> Optional[Dict]:
+        if not self.enabled:
+            return None
+        return self.backend.get_questionnaire(company_id, agents)
+
+    def check_questionnaire_valid(self, company_id: str, agents: List[str],
+                                  current_source_hashes: Dict) -> bool:
+        if not self.enabled:
+            return False
+        return self.backend.check_questionnaire_valid(company_id, agents, current_source_hashes)
 
 
 # Global instance (similar to storage_manager pattern)

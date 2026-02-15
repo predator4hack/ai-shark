@@ -292,35 +292,198 @@ class QuestionnaireProcessor:
         
         if skipped:
             print(f"\n⚠️ Skipped (Already exists or not ready): {len(skipped)}")
-    
-    def run_post_analysis_questionnaire(self, company_dir: str) -> QuestionnaireResult:
+
+    def _get_successful_agents(self, company_dir: str) -> List[str]:
         """
-        Run questionnaire generation as part of the analysis pipeline
-        
-        This method is designed to be called automatically after analysis agents complete.
-        
+        Determine which agents completed successfully
+
         Args:
             company_dir: Path to company directory
-            
+
+        Returns:
+            Sorted list of agent types that have analysis files
+        """
+        company_path = Path(company_dir)
+        analysis_dir = company_path / "analysis"
+
+        if not analysis_dir.exists():
+            return []
+
+        # Find all analysis files (exclude summary)
+        analysis_files = [f for f in analysis_dir.glob("*_analysis.md")
+                         if f.name != "analysis_summary.md"]
+
+        # Extract agent types from filenames
+        # business_analysis.md -> business
+        agents = []
+        for file_path in analysis_files:
+            agent_type = file_path.stem.replace('_analysis', '')
+            agents.append(agent_type)
+
+        return sorted(agents)
+
+    def _calculate_source_hashes(self, company_dir: str) -> Dict[str, str]:
+        """
+        Calculate SHA-256 hashes of source documents for cache validation
+
+        Args:
+            company_dir: Path to company directory
+
+        Returns:
+            Dictionary with content hashes
+        """
+        import hashlib
+
+        company_path = Path(company_dir)
+        hashes = {}
+
+        pitch_deck_path = company_path / "pitch_deck.md"
+        if pitch_deck_path.exists():
+            content = pitch_deck_path.read_text(encoding='utf-8')
+            hashes['pitch_deck_hash'] = hashlib.sha256(content.encode()).hexdigest()
+
+        public_data_path = company_path / "public_data.md"
+        if public_data_path.exists():
+            content = public_data_path.read_text(encoding='utf-8')
+            hashes['public_data_hash'] = hashlib.sha256(content.encode()).hexdigest()
+
+        return hashes
+
+    def run_post_analysis_questionnaire(self, company_dir: str) -> QuestionnaireResult:
+        """
+        Run questionnaire generation with intelligent caching
+
+        Cache Logic:
+        1. Check Firestore for existing questionnaire with same agents
+        2. Validate source hashes match
+        3. If valid → return cached (0s processing)
+        4. If invalid/missing → generate fresh and save to Firestore
+
+        Args:
+            company_dir: Path to company directory
+
         Returns:
             QuestionnaireResult with processing results
         """
-        print(f"\n🎯 Post-Analysis Questionnaire Generation")
-        print("=" * 50)
-        
-        company_name = Path(company_dir).name
+        from ..api.services.firestore_manager import firestore_db
+        import json
+
+        print(f"\n🎯 Post-Analysis Questionnaire Generation (with Caching)")
+        print("=" * 60)
+
+        company_path = Path(company_dir)
+        company_name = company_path.name
         print(f"Company: {company_name}")
-        print(f"Trigger: Analysis pipeline completion")
-        
-        # Configure for automatic processing
+
+        # Determine successful agents
+        successful_agents = self._get_successful_agents(company_dir)
+
+        if not successful_agents:
+            print("❌ No successful analyses found")
+            return QuestionnaireResult(
+                success=False,
+                error_message="No successful analyses available"
+            )
+
+        print(f"✅ Found {len(successful_agents)} analyses: {', '.join(successful_agents)}")
+
+        # ============= CACHING LOGIC =============
+
+        if firestore_db.enabled:
+            try:
+                metadata_file = company_path / "metadata.json"
+                if metadata_file.exists():
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+
+                    website = metadata.get('website')
+                    if website:
+                        print(f"\n🔍 Checking Firestore cache...")
+
+                        company = firestore_db.get_company_by_url(website)
+                        if company:
+                            company_id = company['company_id']
+                            current_hashes = self._calculate_source_hashes(company_dir)
+
+                            # Check cache validity
+                            if firestore_db.check_questionnaire_valid(
+                                company_id, successful_agents, current_hashes
+                            ):
+                                # CACHE HIT!
+                                cached_q = firestore_db.get_questionnaire(company_id, successful_agents)
+
+                                if cached_q:
+                                    # Save to file
+                                    questionnaire_file = company_path / "founders-checklist.md"
+                                    questionnaire_file.write_text(cached_q['content'], encoding='utf-8')
+
+                                    print(f"✅ Using cached questionnaire (0s)")
+                                    print(f"📄 File: {questionnaire_file}")
+
+                                    return QuestionnaireResult(
+                                        success=True,
+                                        questionnaire_content=cached_q['content'],
+                                        markdown_file=str(questionnaire_file),
+                                        processing_time=0.0,  # Instant
+                                        metadata={
+                                            "company_name": company_name,
+                                            "cached": True,
+                                            "agents_used": successful_agents,
+                                            "cache_timestamp": cached_q.get('created_at')
+                                        }
+                                    )
+                            else:
+                                print(f"   ⚠️ Cache miss/invalid - generating fresh")
+            except Exception as e:
+                print(f"⚠️ Cache check failed: {e}")
+                print("   Continuing with generation...")
+
+        # ============= GENERATE FRESH =============
+
+        print(f"\n🔄 Generating new questionnaire...")
+
         config = QuestionnaireConfig(
             company_dir=company_dir,
             use_real_llm=True,
             output_format="markdown",
             max_retries=3
         )
-        
-        return self.process_company_questionnaire(company_dir, config)
+
+        result = self.process_company_questionnaire(company_dir, config)
+
+        # Save to Firestore if successful
+        if result.success and firestore_db.enabled:
+            try:
+                metadata_file = company_path / "metadata.json"
+                if metadata_file.exists():
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+
+                    website = metadata.get('website')
+                    if website:
+                        company = firestore_db.get_company_by_url(website)
+                        if company:
+                            company_id = company['company_id']
+                            current_hashes = self._calculate_source_hashes(company_dir)
+
+                            questionnaire_data = {
+                                'content': result.questionnaire_content,
+                                'processing_time': result.processing_time,
+                                'source_hashes': current_hashes,
+                                'metadata': {
+                                    'report_types': successful_agents,
+                                    'total_reports': len(successful_agents)
+                                }
+                            }
+
+                            agents_hash = firestore_db.save_questionnaire(
+                                company_id, successful_agents, questionnaire_data
+                            )
+                            print(f"   💾 Saved to Firestore (hash: {agents_hash})")
+            except Exception as e:
+                print(f"⚠️ Failed to save to Firestore: {e}")
+
+        return result
 
 
 def create_questionnaire_processor(llm_manager: Optional[LLMManager] = None,

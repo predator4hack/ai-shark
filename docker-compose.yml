@@ -15,6 +15,7 @@ services:
             - ./backend/outputs:/app/outputs
             - ./backend/tests:/app/tests
             - ./backend/task_config.py:/app/task_config.py
+            - ./backend/firebase-credentials.json:/app/firebase-credentials.json
         env_file:
             - ./backend/.env
         environment:
@@ -22,6 +23,7 @@ services:
             - USE_GCS=false
             - OUTPUT_DIR=/app/outputs
             - API_PORT=8000
+            - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
         command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
         networks:
             - ai-shark-network

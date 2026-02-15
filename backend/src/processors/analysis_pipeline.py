@@ -521,11 +521,18 @@ class AnalysisPipeline:
                                         "analysis_type": f"{agent_type}_analysis",
                                         "cached": True
                                     }
-                                    print(f"   ✅ Cache HIT: {agent_type} analysis (using cached version)")
+                                    cached_hashes = cached.get('source_hashes', {})
+                                    print(f"   ✅ Cache HIT: {agent_type} analysis")
+                                    print(f"      Pitch deck: {cached_hashes.get('pitch_deck_hash', 'N/A')[:8]}...")
+                                    print(f"      Public data: {cached_hashes.get('public_data_hash', 'N/A')[:8]}...")
 
-                    print(f"\n📊 Cache Summary:")
-                    print(f"   📦 Cached: {len(cached_results)} agents")
-                    print(f"   🔄 To run: {len(agents_to_run)} agents")
+                    print(f"\n📊 Cache Analysis:")
+                    print(f"   Requested: {', '.join(valid_selected_agents)}")
+                    print(f"   Cached: {len(cached_results)} agents")
+                    print(f"   To run: {len(agents_to_run)} agents")
+                    if valid_selected_agents:
+                        effectiveness = (len(cached_results) / len(valid_selected_agents) * 100)
+                        print(f"   Effectiveness: {effectiveness:.1f}%")
                 else:
                     print("⚠️ No website URL in metadata, skipping Firestore caching")
             except Exception as e:

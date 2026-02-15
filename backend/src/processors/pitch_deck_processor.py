@@ -23,18 +23,18 @@ class PitchDeckProcessor(BaseProcessor):
     def process(self, file_path: str, output_dir: str = "outputs") -> Dict[str, Any]:
         """
         Main processing logic for pitch decks
-        
+
         Args:
             file_path: Path to the pitch deck file
             output_dir: Base output directory
-            
+
         Returns:
             Dictionary containing processing results and metadata
         """
         try:
             print(f"Processing pitch deck: {file_path}")
             file_extension = Path(file_path).suffix.lower()
-            
+
             # Convert to images based on file type
             if self.use_mock:
                 print("Mock mode: Skipping file conversion")
@@ -58,11 +58,11 @@ class PitchDeckProcessor(BaseProcessor):
 
             if images or self.use_mock:
                 print(f"Successfully processed document ({'mock mode' if self.use_mock else f'{len(images)} pages'})")
-            
+
             # Stage 1: Extract metadata including startup info and table of contents
             print("Stage 1: Extracting startup metadata and table of contents...")
             metadata = self._extract_metadata(images)
-            
+
             if not metadata:
                 raise ValueError("Could not extract metadata from the document")
             print(metadata)
@@ -71,25 +71,48 @@ class PitchDeckProcessor(BaseProcessor):
             if not company_name:
                 company_name = OutputManager.generate_fallback_name()
                 print(f"No company name found, using fallback: {company_name}")
-            
+
             company_dir = OutputManager.create_company_dir(company_name, output_dir)
-            
+
             # Get output file paths
             output_paths = OutputManager.get_output_paths(company_dir, 'pitch_deck')
-            
+
             # Save metadata
             OutputManager.save_json(metadata, output_paths['metadata'])
-            
+
             # Stage 2: Topic-based extraction (if table of contents exists)
+            # Check if company already exists in Firestore and has pitch deck data
             extracted_data = {}
-            if metadata.get('table_of_contents'):
+            existing_pitch_deck_content = None
+
+            # Import firestore_db here to avoid circular imports
+            from src.api.services.firestore_manager import firestore_db
+
+            website = metadata.get('website')
+            if website and firestore_db.enabled:
+                existing_company = firestore_db.get_company_by_url(website)
+                if existing_company:
+                    company_id = existing_company.get('company_id')
+                    existing_pitch_deck = firestore_db.get_source_document(company_id, 'pitch_deck')
+                    if existing_pitch_deck:
+                        existing_pitch_deck_content = existing_pitch_deck.get('content')
+                        print(f"✅ Found existing pitch deck data for {company_name} in Firestore")
+                        print("⏭️ Skipping Stage 2: Topic-based extraction (using existing data)")
+
+            # Only perform topic extraction if we don't have existing data
+            if not existing_pitch_deck_content and metadata.get('table_of_contents'):
                 print("Stage 2: Performing topic-based extraction...")
                 extracted_data = self._extract_topics(images, metadata['table_of_contents'])
-            else:
+            elif not metadata.get('table_of_contents'):
                 print("No table of contents found, skipping topic-based extraction")
-            
+
             # Convert to markdown and save
-            markdown_content = self._convert_to_markdown(extracted_data, metadata)
+            # Use existing content if available, otherwise generate new markdown
+            if existing_pitch_deck_content:
+                markdown_content = existing_pitch_deck_content
+                print("📄 Using existing pitch deck markdown from Firestore")
+            else:
+                markdown_content = self._convert_to_markdown(extracted_data, metadata)
             OutputManager.save_file(markdown_content, output_paths['markdown'])
             
             # Save table of contents separately if available
