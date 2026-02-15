@@ -40,6 +40,7 @@ class PitchDeckProcessor(BaseProcessor):
                 print("Mock mode: Skipping file conversion")
                 images = []  # Empty list for mock mode
             else:
+                print(f"Converting {file_extension} to images...")
                 if file_extension == '.pdf':
                     images = self._process_pdf(file_path)
                 elif file_extension in ['.ppt', '.pptx']:
@@ -50,7 +51,7 @@ class PitchDeckProcessor(BaseProcessor):
                 if not images:
                     raise ValueError("Could not extract images from the file")
 
-                print(f"Successfully extracted {len(images)} pages/slides")
+                print(f"✅ Successfully extracted {len(images)} pages/slides")
 
             # In mock mode, we don't need images, metadata extraction will use mock data
             if not self.use_mock and not images:
@@ -61,11 +62,16 @@ class PitchDeckProcessor(BaseProcessor):
 
             # Stage 1: Extract metadata including startup info and table of contents
             print("Stage 1: Extracting startup metadata and table of contents...")
-            metadata = self._extract_metadata(images)
-
-            if not metadata:
-                raise ValueError("Could not extract metadata from the document")
-            print(metadata)
+            try:
+                metadata = self._extract_metadata(images)
+                if not metadata:
+                    raise ValueError("Could not extract metadata from the document")
+                print(f"✅ Metadata extracted successfully: {metadata.get('startup_name', 'Unknown')}")
+            except Exception as e:
+                print(f"❌ Error extracting metadata: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
             # Extract company name and create output directory
             company_name = metadata.get('startup_name')
             if not company_name:
@@ -102,7 +108,13 @@ class PitchDeckProcessor(BaseProcessor):
             # Only perform topic extraction if we don't have existing data
             if not existing_pitch_deck_content and metadata.get('table_of_contents'):
                 print("Stage 2: Performing topic-based extraction...")
-                extracted_data = self._extract_topics(images, metadata['table_of_contents'])
+                try:
+                    extracted_data = self._extract_topics(images, metadata['table_of_contents'])
+                    print(f"✅ Topic extraction completed")
+                except Exception as e:
+                    print(f"⚠️ Topic extraction failed: {e}")
+                    # Continue processing even if topic extraction fails
+                    extracted_data = {}
             elif not metadata.get('table_of_contents'):
                 print("No table of contents found, skipping topic-based extraction")
 

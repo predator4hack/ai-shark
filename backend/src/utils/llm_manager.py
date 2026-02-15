@@ -103,15 +103,23 @@ class LLMManager:
         api_key = get_google_api_key()
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found. Please set it in a .env file or mount as secret.")
+
+        # Validate API key format
+        if not api_key.startswith("AIza"):
+            logger.warning(f"⚠️ Google API key format looks unusual. First 4 chars: {api_key[:4]}")
+
         genai.configure(api_key=api_key)
-        logger.info("Gemini API configured successfully")
+        logger.info(f"✅ Gemini API configured successfully (key: ...{api_key[-4:]})")
 
     def _configure_groq(self):
         """Configure Groq API for text tasks and optionally vision"""
         if not self.groq_api_key:
-            logger.warning("GROQ_API_KEY not found. Text tasks will fail without it.")
+            logger.warning("⚠️ GROQ_API_KEY not found. Text tasks will fail without it.")
         else:
-            logger.info("Groq API configured successfully")
+            # Validate API key format
+            if not self.groq_api_key.startswith("gsk_"):
+                logger.warning(f"⚠️ Groq API key format looks unusual. First 4 chars: {self.groq_api_key[:4]}")
+            logger.info(f"✅ Groq API configured successfully (key: ...{self.groq_api_key[-4:]})")
     
     @staticmethod
     def retry_with_backoff(retries=5, backoff_in_seconds=5):
@@ -136,8 +144,17 @@ class LLMManager:
     
     # Direct Gemini API Methods (for document processing)
     
-    def pdf_to_images(self, pdf_path: str) -> List[Image.Image]:
-        """Convert each page of a PDF into a list of PIL Images"""
+    def pdf_to_images(self, pdf_path: str, max_dimension: int = 1024) -> List[Image.Image]:
+        """
+        Convert each page of a PDF into a list of PIL Images
+
+        Args:
+            pdf_path: Path to PDF file
+            max_dimension: Maximum width or height for resized images (default: 1024)
+
+        Returns:
+            List of PIL Image objects
+        """
         # Mock mode: skip PDF conversion
         if self.use_mock:
             logger.info("Mock mode: Skipping PDF to images conversion")
@@ -145,18 +162,37 @@ class LLMManager:
 
         try:
             doc = fitz.open(pdf_path)
+            total_pages = len(doc)
+            logger.info(f"Converting PDF with {total_pages} pages to images...")
+
             images = []
-            for page_num in range(len(doc)):
+            for page_num in range(total_pages):
                 page = doc.load_page(page_num)
-                pix = page.get_pixmap(dpi=150)
+                # Use lower DPI for faster processing and smaller payload
+                pix = page.get_pixmap(dpi=120)
                 img_data = pix.tobytes("png")
                 image = Image.open(io.BytesIO(img_data))
+
+                # Resize image if too large to reduce API payload size
+                width, height = image.size
+                if width > max_dimension or height > max_dimension:
+                    ratio = max_dimension / max(width, height)
+                    new_size = (int(width * ratio), int(height * ratio))
+                    image = image.resize(new_size, Image.Resampling.LANCZOS)
+
                 images.append(image)
+
+                # Log progress for large documents
+                if (page_num + 1) % 5 == 0 or (page_num + 1) == total_pages:
+                    logger.info(f"Converted {page_num + 1}/{total_pages} pages")
+
             doc.close()
-            logger.info(f"Successfully converted PDF to {len(images)} images")
+            logger.info(f"✅ Successfully converted PDF to {len(images)} images")
             return images
         except Exception as e:
-            logger.error(f"Error converting PDF to images: {e}")
+            logger.error(f"❌ Error converting PDF to images: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     @retry_with_backoff()
@@ -216,57 +252,76 @@ class LLMManager:
 
     def _extract_with_gemini_vision(self, prompt: str, page_images: List[Image.Image]) -> str:
         """Extract content using Gemini vision API"""
-        model = genai.GenerativeModel(self.vision_model_google)
-        content = [prompt] + page_images
-        response = model.generate_content(content)
-        logger.info(f"Gemini vision response received")
-        return response.text
+        try:
+            logger.info(f"Calling Gemini vision API with {len(page_images)} images...")
+            model = genai.GenerativeModel(self.vision_model_google)
+            content = [prompt] + page_images
+            response = model.generate_content(content)
+            logger.info(f"✅ Gemini vision response received")
+            return response.text
+        except Exception as e:
+            logger.error(f"❌ Gemini vision API error: {e}")
+            raise
 
     def _extract_with_groq_vision(self, prompt: str, page_images: List[Image.Image]) -> str:
         """Extract content using Groq vision API (Llama 4 Maverick)"""
-        # Convert PIL images to base64
-        image_contents = []
-        for img in page_images:
-            buffered = io.BytesIO()
-            img.save(buffered, format="PNG")
-            img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            image_contents.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{img_base64}"
-                }
-            })
+        try:
+            logger.info(f"Calling Groq vision API with {len(page_images)} images...")
+            # Convert PIL images to base64
+            image_contents = []
+            for i, img in enumerate(page_images):
+                buffered = io.BytesIO()
+                img.save(buffered, format="PNG")
+                img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                image_contents.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{img_base64}"
+                    }
+                })
+                if (i + 1) % 5 == 0:
+                    logger.info(f"Encoded {i + 1}/{len(page_images)} images")
 
-        # Build message with text and images
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    *image_contents
-                ]
-            }
-        ]
-
-        # Call Groq API
-        with httpx.Client(timeout=120.0) as client:
-            response = client.post(
-                f"{self.groq_base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.groq_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.vision_model_groq,
-                    "messages": messages,
-                    "max_tokens": 8000,
-                    "temperature": 0.1
+            # Build message with text and images
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        *image_contents
+                    ]
                 }
-            )
-            response.raise_for_status()
-            result = response.json()
-            logger.info(f"Groq vision response received")
-            return result["choices"][0]["message"]["content"]
+            ]
+
+            logger.info(f"Sending request to Groq API...")
+            # Call Groq API with increased timeout for large documents
+            with httpx.Client(timeout=240.0) as client:
+                response = client.post(
+                    f"{self.groq_base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.vision_model_groq,
+                        "messages": messages,
+                        "max_tokens": 8000,
+                        "temperature": 0.1
+                    }
+                )
+                response.raise_for_status()
+                result = response.json()
+                logger.info(f"✅ Groq vision response received")
+                return result["choices"][0]["message"]["content"]
+        except httpx.TimeoutException as e:
+            logger.error(f"❌ Groq vision API timeout: {e}")
+            raise Exception(f"Vision API request timed out after 240s. Document may be too large.")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"❌ Groq vision API HTTP error: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"Vision API returned error: {e.response.status_code}")
+        except Exception as e:
+            logger.error(f"❌ Groq vision API error: {e}")
+            raise
     
     @retry_with_backoff()
     def extract_topic_data(self, topic: str, page_images: List[Image.Image]) -> str:

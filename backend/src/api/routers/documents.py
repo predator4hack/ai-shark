@@ -27,6 +27,7 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
             JobStatus.PROCESSING,
             "Starting pitch deck processing..."
         )
+        print(f"📋 Processing job {job_id} started")
 
         # Initialize processor
         processor = PitchDeckProcessor()
@@ -42,10 +43,15 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
         # Create a temporary output directory
         temp_output_dir = tempfile.mkdtemp()
 
+        print(f"🔄 Starting pitch deck processing for job {job_id}")
         result = processor.process(
             file_path=temp_file_path,
             output_dir=temp_output_dir
         )
+
+        # Check if processing failed
+        if result.get('status') == 'error':
+            raise Exception(result.get('error', 'Unknown error during processing'))
 
         # Get company name from result and sanitize it for directory naming
         raw_company_name = result.get("company_name", "unknown")
@@ -136,8 +142,14 @@ def process_pitch_deck_background(job_id: str, temp_file_path: str):
 
     except Exception as e:
         import traceback
+        import sys
         error_details = traceback.format_exc()
-        print(f"Error processing pitch deck: {error_details}")
+
+        # Print to stderr to ensure it appears in Cloud Run logs
+        print(f"❌ ERROR processing pitch deck (job {job_id}):", file=sys.stderr)
+        print(f"❌ Exception type: {type(e).__name__}", file=sys.stderr)
+        print(f"❌ Exception message: {str(e)}", file=sys.stderr)
+        print(f"❌ Full traceback:\n{error_details}", file=sys.stderr)
 
         job_manager.update_status(
             job_id,
