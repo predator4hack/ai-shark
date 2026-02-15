@@ -185,6 +185,8 @@ class LLMManager:
                 # Log progress for large documents
                 if (page_num + 1) % 5 == 0 or (page_num + 1) == total_pages:
                     logger.info(f"Converted {page_num + 1}/{total_pages} pages")
+                    import sys
+                    sys.stdout.flush()  # Force flush for Cloud Run
 
             doc.close()
             logger.info(f"✅ Successfully converted PDF to {len(images)} images")
@@ -254,13 +256,30 @@ class LLMManager:
         """Extract content using Gemini vision API"""
         try:
             logger.info(f"Calling Gemini vision API with {len(page_images)} images...")
+            import sys
+            sys.stdout.flush()
+
             model = genai.GenerativeModel(self.vision_model_google)
             content = [prompt] + page_images
-            response = model.generate_content(content)
+
+            # Add timeout and safety settings for production
+            logger.info(f"Sending request to Gemini API...")
+            sys.stdout.flush()
+
+            response = model.generate_content(
+                content,
+                request_options={"timeout": 180}  # 3 minute timeout
+            )
+
             logger.info(f"✅ Gemini vision response received")
+            sys.stdout.flush()
             return response.text
         except Exception as e:
-            logger.error(f"❌ Gemini vision API error: {e}")
+            logger.error(f"❌ Gemini vision API error: {type(e).__name__}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            import sys
+            sys.stderr.flush()
             raise
 
     def _extract_with_groq_vision(self, prompt: str, page_images: List[Image.Image]) -> str:

@@ -41,6 +41,8 @@ class PitchDeckProcessor(BaseProcessor):
                 images = []  # Empty list for mock mode
             else:
                 print(f"Converting {file_extension} to images...")
+                import sys
+                sys.stdout.flush()  # Force flush for Cloud Run
                 if file_extension == '.pdf':
                     images = self._process_pdf(file_path)
                 elif file_extension in ['.ppt', '.pptx']:
@@ -52,6 +54,8 @@ class PitchDeckProcessor(BaseProcessor):
                     raise ValueError("Could not extract images from the file")
 
                 print(f"✅ Successfully extracted {len(images)} pages/slides")
+                import sys
+                sys.stdout.flush()
 
             # In mock mode, we don't need images, metadata extraction will use mock data
             if not self.use_mock and not images:
@@ -59,9 +63,13 @@ class PitchDeckProcessor(BaseProcessor):
 
             if images or self.use_mock:
                 print(f"Successfully processed document ({'mock mode' if self.use_mock else f'{len(images)} pages'})")
+                import sys
+                sys.stdout.flush()
 
             # Stage 1: Extract metadata including startup info and table of contents
             print("Stage 1: Extracting startup metadata and table of contents...")
+            import sys
+            sys.stdout.flush()
             try:
                 metadata = self._extract_metadata(images)
                 if not metadata:
