@@ -144,13 +144,14 @@ class LLMManager:
     
     # Direct Gemini API Methods (for document processing)
     
-    def pdf_to_images(self, pdf_path: str, max_dimension: int = 1024) -> List[Image.Image]:
+    def pdf_to_images(self, pdf_path: str, max_dimension: int = 1024, progress_callback=None) -> List[Image.Image]:
         """
         Convert each page of a PDF into a list of PIL Images
 
         Args:
             pdf_path: Path to PDF file
             max_dimension: Maximum width or height for resized images (default: 1024)
+            progress_callback: Optional ProgressCallback for streaming progress updates
 
         Returns:
             List of PIL Image objects
@@ -187,6 +188,15 @@ class LLMManager:
                     logger.info(f"Converted {page_num + 1}/{total_pages} pages")
                     import sys
                     sys.stdout.flush()  # Force flush for Cloud Run
+
+                    # Emit progress callback for SSE streaming
+                    if progress_callback:
+                        progress_callback.report_progress(
+                            "image_conversion",
+                            current=page_num + 1,
+                            total=total_pages,
+                            message=f"Converted {page_num + 1}/{total_pages} pages"
+                        )
 
             doc.close()
             logger.info(f"✅ Successfully converted PDF to {len(images)} images")

@@ -15,10 +15,31 @@ class PitchDeckProcessor(BaseProcessor):
         self.supported_extensions = ['.pdf', '.ppt', '.pptx']
         self.use_mock = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
         self.llm_manager = get_llm_manager()  # Get at init time, not import time
-    
+        self._progress_callback = None  # For SSE streaming progress
+
     def get_supported_extensions(self) -> List[str]:
         """Return list of supported file extensions"""
         return self.supported_extensions
+
+    def process_with_callback(self, file_path: str, output_dir: str, progress_callback):
+        """
+        Process pitch deck with progress callbacks for SSE streaming.
+
+        Args:
+            file_path: Path to the pitch deck file
+            output_dir: Output directory for processed files
+            progress_callback: ProgressCallback instance for streaming progress
+
+        Returns:
+            Processing result dictionary
+        """
+        self._progress_callback = progress_callback
+        try:
+            return self.process(file_path, output_dir)
+        finally:
+            # Signal completion to progress callback
+            if progress_callback:
+                progress_callback.report_progress(None, None, None, None)
     
     def process(self, file_path: str, output_dir: str = "outputs") -> Dict[str, Any]:
         """
@@ -205,7 +226,11 @@ class PitchDeckProcessor(BaseProcessor):
         if self.use_mock:
             print("Mock mode: Skipping PDF processing")
             return []
-        return self.llm_manager.pdf_to_images(pdf_path)
+        # Pass progress callback to llm_manager for SSE streaming
+        return self.llm_manager.pdf_to_images(
+            pdf_path,
+            progress_callback=self._progress_callback
+        )
     
     def _process_ppt(self, ppt_path: str) -> List[Image.Image]:
         """Process PPT by converting to images"""

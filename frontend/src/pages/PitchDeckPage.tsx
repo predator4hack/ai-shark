@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Icon } from "@iconify/react";
 
 import { DragDropZone } from "../components/FileUpload/DragDropZone";
@@ -9,85 +9,64 @@ import { Badge } from "../components/ui/Badge";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
-    setJobId,
-    updateStatus,
-    setResult,
-    setError,
+    updateProgress,
+    setResultFromSSE,
+    setErrorFromSSE,
     reset,
 } from "../store/slices/pitchDeckSlice";
 import { documentsApi } from "../api/endpoints/documents";
-import { POLLING } from "../utils/constants";
+import { usePitchDeckSSE } from "../hooks/usePitchDeckSSE";
 
 export const PitchDeckPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const pitchDeck = useAppSelector((state) => state.pitchDeck);
-    const [polling, setPolling] = useState(false);
+
+    const { startProcessing, abort } = usePitchDeckSSE({
+        onProgress: (event) => {
+            dispatch(updateProgress({
+                stage: event.stage,
+                message: event.message,
+                progress: event.progress,
+            }));
+        },
+        onComplete: (event) => {
+            dispatch(setResultFromSSE(event));
+        },
+        onError: (event) => {
+            dispatch(setErrorFromSSE({
+                error: event.error,
+                stage: event.stage,
+            }));
+        },
+        onConnectionError: (error) => {
+            dispatch(setErrorFromSSE({
+                error: error.message || "Connection error occurred",
+            }));
+        },
+    });
 
     // Handle file upload
     const handleFileSelect = async (file: File) => {
         try {
             dispatch(
-                updateStatus({
-                    status: "uploading",
-                    progressMessage: "Uploading file...",
+                updateProgress({
+                    stage: "uploading",
+                    message: "Uploading file...",
                 })
             );
 
-            const response = await documentsApi.uploadPitchDeck(file);
-            dispatch(setJobId(response.job_id));
-            setPolling(true);
+            await startProcessing(file);
         } catch (error: any) {
-            dispatch(setError(error.response?.data?.detail || "Upload failed"));
+            dispatch(setErrorFromSSE({
+                error: error.message || "Upload failed",
+            }));
         }
     };
 
-    // Poll job status
-    useEffect(() => {
-        if (!polling || !pitchDeck.jobId) return;
-
-        const pollInterval = setInterval(async () => {
-            try {
-                const status = await documentsApi.getJobStatus(
-                    pitchDeck.jobId!
-                );
-
-                dispatch(
-                    updateStatus({
-                        status: status.status as any,
-                        progressMessage: status.progress_message,
-                    })
-                );
-
-                if (status.status === "completed" && status.result) {
-                    dispatch(
-                        setResult({
-                            companyName: status.result.company_name,
-                            files: status.result.files_created,
-                            metadata: {
-                                company_name: status.result.company_name,
-                                ...status.result.metadata,
-                            },
-                        })
-                    );
-                    setPolling(false);
-                } else if (status.status === "failed") {
-                    dispatch(setError(status.error || "Processing failed"));
-                    setPolling(false);
-                }
-            } catch (error: any) {
-                console.error("Polling error:", error);
-                dispatch(setError("Failed to fetch job status"));
-                setPolling(false);
-            }
-        }, POLLING.INTERVAL_MS);
-
-        return () => clearInterval(pollInterval);
-    }, [polling, pitchDeck.jobId, dispatch]);
-
     // Handle reset
     const handleReset = () => {
+        abort();
         dispatch(reset());
-        setPolling(false);
     };
 
     return (
@@ -132,10 +111,26 @@ export const PitchDeckPage: React.FC = () => {
                                     />
                                 </div>
                             </div>
-                            <ProgressBar indeterminate className="my-4" />
-                            <p className="text-sm text-slate-600">
-                                {pitchDeck.progressMessage}
-                            </p>
+                            <ProgressBar
+                                value={pitchDeck.progressPercent ?? undefined}
+                                indeterminate={pitchDeck.progressPercent === null}
+                                className="my-4"
+                            />
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-slate-600">
+                                    {pitchDeck.progressMessage}
+                                </p>
+                                {pitchDeck.progressPercent !== null && (
+                                    <p className="text-sm font-medium text-slate-700">
+                                        {pitchDeck.progressPercent}%
+                                    </p>
+                                )}
+                            </div>
+                            {pitchDeck.currentStage && (
+                                <p className="text-xs text-slate-500 mt-2">
+                                    Stage: {pitchDeck.currentStage}
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 )}

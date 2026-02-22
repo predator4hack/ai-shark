@@ -11,6 +11,12 @@ export interface PitchDeckState {
   jobId: string | null
   status: 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
   progressMessage: string
+  currentStage: string | null
+  progressPercent: number | null
+  progressDetails: {
+    current: number
+    total: number
+  } | null
   companyName: string | null
   files: string[]
   metadata: PitchDeckMetadata | null
