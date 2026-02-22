@@ -1,4 +1,4 @@
-# Production Backend-only Dockerfile - AI-Shark VC Document Analyzer
+# Production Backend-only Dockerfile - Aviato VC Document Analyzer
 # Stage 1: Python Dependencies Builder
 FROM python:3.11-slim AS python-builder
 
@@ -84,4 +84,4 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Run FastAPI backend only
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080"]

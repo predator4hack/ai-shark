@@ -1,4 +1,4 @@
-# AI-Shark: Intelligent VC Document Analysis Platform
+# Aviato: Intelligent VC Document Analysis Platform
 
 > A comprehensive multi-phase AI-powered pipeline for venture capital deal analysis, built with React, FastAPI, and Google Gemini LLM.
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-**AI-Shark** is an intelligent document analysis platform designed to streamline the venture capital investment process. It automates the extraction, processing, and analysis of pitch decks and related documents, generating comprehensive investment memos through a multi-agent AI system.
+**Aviato** is an intelligent document analysis platform designed to streamline the venture capital investment process. It automates the extraction, processing, and analysis of pitch decks and related documents, generating comprehensive investment memos through a multi-agent AI system.
 
 The platform transforms what traditionally takes VC analysts 15-30 hours of manual work into an automated, structured workflow that produces consistent, thorough investment analyses.
 
@@ -61,7 +61,7 @@ The platform transforms what traditionally takes VC analysts 15-30 hours of manu
 
 ### 🧪 Mock Mode for Development & Testing
 
-AI-Shark includes a comprehensive **mock mode** that eliminates the need for LLM API calls during development and testing:
+Aviato includes a comprehensive **mock mode** that eliminates the need for LLM API calls during development and testing:
 
 **Benefits:**
 
@@ -185,7 +185,7 @@ The platform uses a **hybrid storage approach**:
 The project is organized into separate frontend and backend directories for independent deployment:
 
 ```text
-ai-shark/
+aviato/
 ├── backend/          # FastAPI backend (deployed to Google Cloud Run)
 │   ├── src/          # Application source code
 │   ├── config/       # Configuration files
@@ -312,13 +312,13 @@ This starts:
 cd backend
 
 # Build backend Docker image
-docker build -t ai-shark-backend:latest .
+docker build -t aviato-backend:latest .
 
 # Run backend container
 docker run -p 8080:8080 \
   -e USE_GCS=false \
   -e GOOGLE_API_KEY=your_key_here \
-  ai-shark-backend:latest
+  aviato-backend:latest
 ```
 
 #### Frontend Production Build
@@ -327,10 +327,10 @@ docker run -p 8080:8080 \
 cd frontend
 
 # Build frontend Docker image
-docker build -t ai-shark-frontend:latest .
+docker build -t aviato-frontend:latest .
 
 # Run frontend container
-docker run -p 3000:80 ai-shark-frontend:latest
+docker run -p 3000:80 aviato-frontend:latest
 ```
 
 ---
@@ -342,7 +342,7 @@ docker run -p 3000:80 ai-shark-frontend:latest
 #### 1. Create GCS Bucket
 
 ```bash
-gcloud storage buckets create gs://ai-shark-outputs \
+gcloud storage buckets create gs://aviato-outputs \
   --location=us-central1 \
   --uniform-bucket-level-access
 ```
@@ -352,12 +352,12 @@ gcloud storage buckets create gs://ai-shark-outputs \
 ```bash
 cd backend
 
-gcloud run deploy ai-shark-backend \
+gcloud run deploy aviato-backend \
   --source . \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \
-  --set-env-vars USE_GCS=true,GCS_BUCKET_NAME=ai-shark-outputs \
+  --set-env-vars USE_GCS=true,GCS_BUCKET_NAME=aviato-outputs \
   --set-secrets GOOGLE_API_KEY=google-api-key:latest \
   --memory 2Gi \
   --cpu 1 \
@@ -368,7 +368,7 @@ gcloud run deploy ai-shark-backend \
 #### 3. Get Backend URL
 
 ```bash
-gcloud run services describe ai-shark-backend --region us-central1 --format='value(status.url)'
+gcloud run services describe aviato-backend --region us-central1 --format='value(status.url)'
 ```
 
 ### Frontend Deployment (Vercel)
@@ -474,7 +474,7 @@ Full interactive API documentation is available at `/docs` when running the back
 | `GOOGLE_API_KEY`   | Google Gemini API key    | -                  | ✅              |
 | `GEMINI_MODEL`     | Gemini model name        | `gemini-2.5-flash` | ❌              |
 | `USE_GCS`          | Use Google Cloud Storage | `false`            | ❌              |
-| `GCS_BUCKET_NAME`  | GCS bucket name          | `ai-shark-outputs` | Production only |
+| `GCS_BUCKET_NAME`  | GCS bucket name          | `aviato-outputs` | Production only |
 | `OUTPUT_DIR`       | Local storage directory  | `outputs`          | ❌              |
 | `API_PORT`         | FastAPI server port      | `8000`             | ❌              |
 | `MAX_FILE_SIZE_MB` | Max upload size (MB)     | `100`              | ❌              |
@@ -516,7 +516,7 @@ cd frontend
 npm run build
 
 # Build Docker image
-docker build -f Dockerfile.prod -t ai-shark:latest .
+docker build -f Dockerfile.prod -t aviato:latest .
 ```
 
 ---
@@ -525,7 +525,7 @@ docker build -f Dockerfile.prod -t ai-shark:latest .
 
 ### Automation Impact
 
-| Task                         | Traditional Time | AI-Shark Time | Automation % |
+| Task                         | Traditional Time | Aviato Time | Automation % |
 | ---------------------------- | ---------------- | ------------- | ------------ |
 | Initial Screening            | 1-2 hours        | 5-10 minutes  | **80%**      |
 | Deep Dive Analysis           | 4-8 hours        | 1-2 hours     | **60%**      |

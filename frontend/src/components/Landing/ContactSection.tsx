@@ -7,7 +7,7 @@ const ContactSection = () => {
                 </h2>
                 <p className="text-slate-500 mb-10">
                     Join the waiting list or get in touch to schedule a
-                    personalized walkthrough of the AI-Shark platform
+                    personalized walkthrough of the Aviato platform
                 </p>
 
                 <form className="max-w-md mx-auto space-y-4 text-left">
@@ -42,10 +42,10 @@ const ContactSection = () => {
                 <p className="text-xs text-slate-400 mt-6">
                     Or email us directly at{" "}
                     <a
-                        href="mailto:hello@aishark.vc"
+                        href="mailto:hello@aviato.vc"
                         className="text-blue-600 hover:underline"
                     >
-                        hello@aishark.vc
+                        hello@aviato.vc
                     </a>
                 </p>
             </div>

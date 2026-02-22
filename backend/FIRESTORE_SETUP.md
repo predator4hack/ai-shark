@@ -1,6 +1,6 @@
-# Firestore Setup Guide for AI-Shark
+# Firestore Setup Guide for Aviato
 
-This guide walks you through setting up Firestore for AI-Shark's intelligent caching system.
+This guide walks you through setting up Firestore for Aviato's intelligent caching system.
 
 ## 📋 Prerequisites
 
@@ -16,7 +16,7 @@ This guide walks you through setting up Firestore for AI-Shark's intelligent cac
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Click **"Add project"**
-3. Enter project name: `ai-shark` (or `ai-shark-prod`)
+3. Enter project name: `aviato` (or `aviato-prod`)
 4. **Disable** Google Analytics (not needed)
 5. Click **"Create Project"**
 6. Wait for project creation (~30 seconds)
@@ -40,7 +40,7 @@ This guide walks you through setting up Firestore for AI-Shark's intelligent cac
 
 1. Click the **⚙️ gear icon** next to "Project Overview"
 2. Select **"Project settings"**
-3. Copy the **"Project ID"** (e.g., `ai-shark-12345`)
+3. Copy the **"Project ID"** (e.g., `aviato-12345`)
    - You'll need this for the `.env` file
 
 ---
@@ -57,12 +57,12 @@ Choose **ONE** of the following methods:
    - Firebase Console → ⚙️ Settings → **Service accounts** tab
    - Click **"Generate new private key"**
    - Click **"Generate key"** in the popup
-   - A JSON file downloads (e.g., `ai-shark-firebase-adminsdk-xxxxx.json`)
+   - A JSON file downloads (e.g., `aviato-firebase-adminsdk-xxxxx.json`)
 
 2. **Save the credentials file**:
    ```bash
    # Move to backend directory
-   mv ~/Downloads/ai-shark-firebase-adminsdk-*.json \
+   mv ~/Downloads/aviato-firebase-adminsdk-*.json \
       /Users/chandan/myspace/ai-shark/backend/firebase-credentials.json
 
    # Secure the file (Mac/Linux)
@@ -122,7 +122,7 @@ Choose **ONE** of the following methods:
 
 ### For Backend-Only Access (No Frontend)
 
-Since AI-Shark uses Firestore only from the backend, use these rules:
+Since Aviato uses Firestore only from the backend, use these rules:
 
 1. Go to **Firestore Database** → **Rules** tab
 2. Replace with:
@@ -171,7 +171,7 @@ grep -E "USE_FIRESTORE|GCP_PROJECT_ID|GOOGLE_APPLICATION_CREDENTIALS" .env
 Expected output:
 ```
 USE_FIRESTORE=true
-GCP_PROJECT_ID=ai-shark-12345
+GCP_PROJECT_ID=aviato-12345
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/firebase-credentials.json  # Or blank for ADC
 ```
 
@@ -185,7 +185,7 @@ python -m src.api.main
 
 Look for these log messages:
 ```
-✅ Firestore client initialized for project: ai-shark-12345
+✅ Firestore client initialized for project: aviato-12345
 🔥 Firestore caching enabled
 ```
 
@@ -214,7 +214,7 @@ Here's what your `.env` should look like:
 # =============================================================================
 
 USE_FIRESTORE=true
-GCP_PROJECT_ID=ai-shark-12345  # Replace with YOUR project ID
+GCP_PROJECT_ID=aviato-12345  # Replace with YOUR project ID
 GOOGLE_APPLICATION_CREDENTIALS=/Users/chandan/myspace/ai-shark/backend/firebase-credentials.json
 FIRESTORE_DATABASE_ID=(default)
 ```
@@ -226,7 +226,7 @@ FIRESTORE_DATABASE_ID=(default)
 # =============================================================================
 
 USE_FIRESTORE=true
-GCP_PROJECT_ID=ai-shark-12345  # Replace with YOUR project ID
+GCP_PROJECT_ID=aviato-12345  # Replace with YOUR project ID
 # GOOGLE_APPLICATION_CREDENTIALS not needed - uses gcloud auth
 FIRESTORE_DATABASE_ID=(default)
 ```
@@ -332,7 +332,7 @@ Look for in logs:
 2. Set environment variables in platform dashboard:
    ```
    USE_FIRESTORE=true
-   GCP_PROJECT_ID=ai-shark-12345
+   GCP_PROJECT_ID=aviato-12345
    GOOGLE_APPLICATION_CREDENTIALS=/path/in/deployment/firebase-credentials.json
    ```
 
@@ -342,7 +342,7 @@ Look for in logs:
 2. Just set:
    ```
    USE_FIRESTORE=true
-   GCP_PROJECT_ID=ai-shark-12345
+   GCP_PROJECT_ID=aviato-12345
    ```
 
 ### Docker
@@ -354,7 +354,7 @@ COPY firebase-credentials.json /app/firebase-credentials.json
 
 # Set environment variables
 ENV USE_FIRESTORE=true
-ENV GCP_PROJECT_ID=ai-shark-12345
+ENV GCP_PROJECT_ID=aviato-12345
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
 ```
 
@@ -382,7 +382,7 @@ ENV GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
 - 20K writes/day
 - 1 GB storage
 
-For AI-Shark, typical usage:
+For Aviato, typical usage:
 - 1 company = ~10 writes (initial)
 - Cache hit = 4-8 reads (vs 0 LLM calls 🎉)
 - 100 companies = ~100MB storage

@@ -1,6 +1,6 @@
-# AI-Shark Backend
+# Aviato Backend
 
-FastAPI backend for AI-Shark VC Document Analyzer - deployed on Google Cloud Run.
+FastAPI backend for Aviato VC Document Analyzer - deployed on Google Cloud Run.
 
 ## Setup
 
@@ -30,10 +30,10 @@ This backend is configured for deployment on Google Cloud Run.
 
 ```bash
 # Build the Docker image
-docker build -t ai-shark-backend .
+docker build -t aviato-backend .
 
 # Deploy to Cloud Run
-gcloud run deploy ai-shark-backend \
+gcloud run deploy aviato-backend \
   --source . \
   --region us-central1 \
   --allow-unauthenticated

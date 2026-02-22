@@ -26,7 +26,7 @@ const HeroSection = () => {
                 </h1>
 
                 <p className="md:text-xl leading-relaxed text-lg font-light text-slate-500 max-w-2xl mx-auto mb-10">
-                    AI-Shark transforms 15-30 hours of manual diligence into
+                    Aviato transforms 15-30 hours of manual diligence into
                     structured analysis. Process pitch decks, simulate founder
                     Q&A, and generate comprehensive memos instantly
                 </p>

@@ -735,7 +735,7 @@ export const AnalysisPage: React.FC = () => {
                                 className="text-blue-600"
                             />
                             <span className="text-sm font-medium tracking-tight text-slate-900">
-                                AI-Shark
+                                Aviato
                             </span>
                         </a>
                         <span className="mx-2 text-slate-300">/</span>
@@ -2146,7 +2146,7 @@ export const AnalysisPage: React.FC = () => {
             {/* Footer */}
             <footer className="mt-20 border-t border-slate-200 py-8 bg-white">
                 <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-xs text-slate-400">
-                    <div>© 2024 AI-Shark Inc.</div>
+                    <div>© 2024 Aviato Inc.</div>
                     <div className="flex gap-4">
                         <a href="#" className="hover:text-slate-600">
                             Privacy

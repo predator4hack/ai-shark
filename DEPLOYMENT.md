@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying AI-Shark with the backend on Google Cloud Run and the frontend on Vercel.
+This guide covers deploying Aviato with the backend on Google Cloud Run and the frontend on Vercel.
 
 ## Architecture Overview
 
@@ -16,7 +16,7 @@ This guide covers deploying AI-Shark with the backend on Google Cloud Run and th
 ┌─────────────────────────────────────────────────────────┐
 │              Google Cloud Run (Backend)                  │
 │                    FastAPI + Python                      │
-│         https://ai-shark-backend-xxx.run.app             │
+│         https://aviato-backend-xxx.run.app               │
 └─────────────────────────────────────────────────────────┘
                            │
                 ┌──────────┴──────────┐
@@ -53,7 +53,7 @@ gcloud services enable storage.googleapis.com
 ### 2. Create Google Cloud Storage Bucket
 
 ```bash
-gcloud storage buckets create gs://ai-shark-outputs \
+gcloud storage buckets create gs://aviato-outputs \
   --location=us-central1 \
   --uniform-bucket-level-access
 
@@ -67,7 +67,7 @@ echo '[
   }
 ]' > cors.json
 
-gcloud storage buckets update gs://ai-shark-outputs --cors-file=cors.json
+gcloud storage buckets update gs://aviato-outputs --cors-file=cors.json
 rm cors.json
 ```
 
@@ -88,12 +88,12 @@ gcloud secrets add-iam-policy-binding google-api-key \
 ```bash
 cd backend
 
-gcloud run deploy ai-shark-backend \
+gcloud run deploy aviato-backend \
   --source . \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \
-  --set-env-vars USE_GCS=true,GCS_BUCKET_NAME=ai-shark-outputs,GEMINI_MODEL=gemini-2.5-flash \
+  --set-env-vars USE_GCS=true,GCS_BUCKET_NAME=aviato-outputs,GEMINI_MODEL=gemini-2.5-flash \
   --set-secrets GOOGLE_API_KEY=google-api-key:latest \
   --memory 2Gi \
   --cpu 2 \
@@ -105,7 +105,7 @@ gcloud run deploy ai-shark-backend \
 ### 5. Get Backend URL
 
 ```bash
-export BACKEND_URL=$(gcloud run services describe ai-shark-backend \
+export BACKEND_URL=$(gcloud run services describe aviato-backend \
   --region us-central1 \
   --format='value(status.url)')
 
@@ -182,7 +182,7 @@ vercel --prod
 ```env
 # Required
 GOOGLE_API_KEY=your_google_api_key
-GCS_BUCKET_NAME=ai-shark-outputs
+GCS_BUCKET_NAME=aviato-outputs
 USE_GCS=true
 
 # Optional
@@ -204,7 +204,7 @@ VITE_API_URL=https://your-backend-url.run.app/api
 ### View Backend Logs
 
 ```bash
-gcloud run services logs read ai-shark-backend \
+gcloud run services logs read aviato-backend \
   --region us-central1 \
   --limit 50
 ```
@@ -221,7 +221,7 @@ vercel logs
 
 ```bash
 cd backend
-gcloud run deploy ai-shark-backend --source .
+gcloud run deploy aviato-backend --source .
 ```
 
 ### Update Frontend
@@ -257,7 +257,7 @@ vercel --prod
 
 Check logs:
 ```bash
-gcloud run services logs read ai-shark-backend --region us-central1
+gcloud run services logs read aviato-backend --region us-central1
 ```
 
 Common issues:
@@ -285,10 +285,10 @@ Common issues:
 
 ```bash
 # List revisions
-gcloud run revisions list --service ai-shark-backend --region us-central1
+gcloud run revisions list --service aviato-backend --region us-central1
 
 # Rollback to specific revision
-gcloud run services update-traffic ai-shark-backend \
+gcloud run services update-traffic aviato-backend \
   --to-revisions REVISION_NAME=100 \
   --region us-central1
 ```

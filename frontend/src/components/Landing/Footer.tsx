@@ -8,7 +8,7 @@ const Footer = () => {
           <div className="col-span-2">
             <div className="flex items-center gap-1 mb-6">
               <Icon icon="lucide:zap" width="20" className="text-slate-900" />
-              <span className="text-sm font-medium tracking-tight">AI-Shark</span>
+              <span className="text-sm font-medium tracking-tight">Aviato</span>
             </div>
             <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
               Intelligent document analysis for the modern venture capital firm.
@@ -76,7 +76,7 @@ const Footer = () => {
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t text-xs border-slate-200 text-slate-400">
-          <div>© 2024 AI-Shark Inc. All rights reserved.</div>
+          <div>© 2024 Aviato Inc. All rights reserved.</div>
           <div className="flex gap-6 mt-4 md:mt-0">
             <a href="#" className="hover:text-slate-900">
               <Icon icon="lucide:twitter" width="16" />

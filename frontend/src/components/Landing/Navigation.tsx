@@ -25,7 +25,7 @@ const Navigation = () => {
             width="20"
             className="group-hover:text-blue-600 transition-colors text-slate-900"
           />
-          <span className="text-sm font-medium tracking-tight">AI-Shark</span>
+          <span className="text-sm font-medium tracking-tight">Aviato</span>
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-xs font-normal text-slate-500">

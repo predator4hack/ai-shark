@@ -1,6 +1,6 @@
-# AI-Shark Frontend
+# Aviato Frontend
 
-React + TypeScript frontend for the AI-Shark VC Document Analyzer.
+React + TypeScript frontend for the Aviato VC Document Analyzer.
 
 ## Tech Stack
 

@@ -6,7 +6,7 @@ services:
         build:
             context: ./backend
             dockerfile: Dockerfile.dev
-        container_name: ai-shark-api-dev
+        container_name: aviato-api-dev
         ports:
             - "8000:8000"
         volumes:
@@ -26,7 +26,7 @@ services:
             - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
         command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
         networks:
-            - ai-shark-network
+            - aviato-network
         restart: unless-stopped
 
     # React Frontend
@@ -34,7 +34,7 @@ services:
         build:
             context: ./frontend
             dockerfile: Dockerfile.dev
-        container_name: ai-shark-frontend-dev
+        container_name: aviato-frontend-dev
         ports:
             - "3000:3000"
         volumes:
@@ -47,11 +47,11 @@ services:
             - VITE_PROXY_TARGET=http://api:8000
         command: npm run dev -- --host 0.0.0.0
         networks:
-            - ai-shark-network
+            - aviato-network
         depends_on:
             - api
         restart: unless-stopped
 
 networks:
-    ai-shark-network:
+    aviato-network:
         driver: bridge
