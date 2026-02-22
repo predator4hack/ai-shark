@@ -6,7 +6,7 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "env": {
-    "VITE_API_URL": "https://ai-shark-880830089283.europe-west1.run.app/api"
+    "VITE_API_URL": "https://ai-shark-880830089283.asia-south1.run.app/api"
   },
   "routes": [
     {

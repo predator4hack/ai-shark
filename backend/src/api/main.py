@@ -22,11 +22,16 @@ frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 allowed_origins = [
     "http://localhost:3000",  # React dev server
     "http://localhost:5173",  # Vite default port
+    frontend_url,  # Production frontend from environment variable
 ]
 
-# Add production frontend if different from dev URLs
-if frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+# Remove duplicates
+allowed_origins = list(set(allowed_origins))
+
+# Debug log for CORS configuration
+print(f"🔐 CORS Configuration:")
+print(f"   FRONTEND_URL env var: {os.getenv('FRONTEND_URL', 'NOT SET')}")
+print(f"   Allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
