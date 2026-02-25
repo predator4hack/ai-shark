@@ -1,6 +1,13 @@
 """
-Storage abstraction supporting both local filesystem and GCS.
-Automatically detects environment and uses appropriate backend.
+Storage abstraction for local filesystem.
+
+⚠️ DEPRECATION NOTICE:
+In cloud deployments (Cloud Run), use Firestore and Firebase Storage instead.
+This storage manager is for local development and temporary file processing only.
+
+For persistent storage:
+- Text content (markdown): Use firestore_manager.py
+- Binary files (PDFs): Use firebase_storage_manager.py
 """
 
 from abc import ABC, abstractmethod
@@ -37,12 +44,18 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def get_download_url(self, path: str, expiration: int = 3600) -> str:
-        """Get download URL (signed for GCS, direct for local)"""
+        """Get download URL"""
         pass
 
 
 class LocalStorageBackend(StorageBackend):
-    """Local filesystem storage for development"""
+    """
+    Local filesystem storage for development and temporary processing.
+
+    ⚠️ Note: For production persistent storage, use:
+    - firestore_manager for text content
+    - firebase_storage_manager for binary files
+    """
 
     def __init__(self, base_dir: str = "outputs"):
         self.base_dir = Path(base_dir)
@@ -78,62 +91,29 @@ class LocalStorageBackend(StorageBackend):
         return f"/api/v1/files/download/{path}"
 
 
-class GCSStorageBackend(StorageBackend):
-    """Google Cloud Storage backend for production"""
-
-    def __init__(self, bucket_name: str):
-        from google.cloud import storage
-        self.client = storage.Client()
-        self.bucket = self.client.bucket(bucket_name)
-        self.bucket_name = bucket_name
-
-    def save_file(self, path: str, content: bytes | BinaryIO) -> str:
-        blob = self.bucket.blob(path)
-
-        if isinstance(content, bytes):
-            blob.upload_from_string(content)
-        else:
-            blob.upload_from_file(content, rewind=True)
-
-        return f"gs://{self.bucket_name}/{path}"
-
-    def read_file(self, path: str) -> bytes:
-        blob = self.bucket.blob(path)
-        return blob.download_as_bytes()
-
-    def file_exists(self, path: str) -> bool:
-        return self.bucket.blob(path).exists()
-
-    def list_files(self, prefix: str) -> list[str]:
-        blobs = self.client.list_blobs(self.bucket, prefix=prefix)
-        return [blob.name for blob in blobs]
-
-    def delete_file(self, path: str) -> None:
-        self.bucket.blob(path).delete()
-
-    def get_download_url(self, path: str, expiration: int = 3600) -> str:
-        blob = self.bucket.blob(path)
-        return blob.generate_signed_url(expiration=expiration)
-
-
 class StorageManager:
     """
-    Main storage interface. Auto-detects environment:
-    - Local: USE_GCS=false or missing
-    - GCS: USE_GCS=true
+    Simplified storage manager for local file operations.
+
+    ⚠️ DEPRECATION NOTICE:
+    This manager is for temporary file processing and local development only.
+
+    For production persistent storage on Cloud Run:
+    - Text content (markdown, JSON): Use firestore_manager.py
+    - Binary files (PDFs): Use firebase_storage_manager.py
+
+    This storage manager is still used for:
+    - Temporary files during document processing
+    - Local development when USE_FIRESTORE=false
+    - Intermediate files that don't need persistence
     """
 
     def __init__(self):
-        use_gcs = os.getenv("USE_GCS", "false").lower() == "true"
-
-        if use_gcs:
-            bucket_name = os.getenv("GCS_BUCKET_NAME", "ai-shark-outputs")
-            self.backend = GCSStorageBackend(bucket_name)
-            print(f"✅ Using GCS storage: {bucket_name}")
-        else:
-            base_dir = os.getenv("OUTPUT_DIR", "outputs")
-            self.backend = LocalStorageBackend(base_dir)
-            print(f"✅ Using local storage: {base_dir}")
+        # Always use local storage
+        base_dir = os.getenv("OUTPUT_DIR", "outputs")
+        self.backend = LocalStorageBackend(base_dir)
+        print(f"ℹ️ Using local file storage: {base_dir}")
+        print(f"ℹ️ For persistent storage, use firestore_manager and firebase_storage_manager")
 
     # Delegate all methods to backend
     def save_file(self, path: str, content: bytes | BinaryIO) -> str:

@@ -8,17 +8,20 @@ file discovery, content loading, and memo processing.
 import os
 import logging
 import time
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 from src.agents.final_memo_agent import FinalMemoAgent, create_final_memo_agent
 from src.models.final_memo_models import (
-    FinalMemoRequest, FinalMemoResult, FinalMemoConfig, 
+    FinalMemoRequest, FinalMemoResult, FinalMemoConfig,
     AgentAnalysisDiscovery, AgentWeight
 )
 from src.utils.output_manager import OutputManager
 from src.utils.pdf_generator import convert_markdown_to_pdf, is_pdf_generation_available
+from src.api.services.firestore_manager import firestore_db
+from src.api.services.firebase_storage_manager import firebase_storage
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
@@ -303,12 +306,66 @@ class FinalMemoProcessor:
                 # Save memo to file
                 output_file = self._save_memo_file(result.memo_content, company_dir, request.company_name)
                 result.output_file = output_file
-                
+
                 # Generate PDF version if possible
                 pdf_file = self._generate_pdf_version(result.memo_content, company_dir, request.company_name)
                 if pdf_file:
                     result.pdf_file = pdf_file
-                
+
+                # Save to Firestore and Firebase Storage if enabled
+                if firestore_db.enabled:
+                    try:
+                        # Get company_id from metadata
+                        metadata_file = os.path.join(company_dir, "metadata.json")
+                        if os.path.exists(metadata_file):
+                            with open(metadata_file, 'r') as f:
+                                metadata = json.load(f)
+
+                            website = metadata.get('website')
+                            if website:
+                                company = firestore_db.get_company_by_url(website)
+                                if company:
+                                    company_id = company['company_id']
+
+                                    # Prepare memo data
+                                    memo_data = {
+                                        'content': result.memo_content,
+                                        'processing_time': result.processing_time,
+                                        'agent_weights': agent_weights,
+                                        'metadata': {
+                                            'total_length': len(result.memo_content),
+                                            'generated_at': datetime.now().isoformat()
+                                        }
+                                    }
+
+                                    # Upload PDF to Firebase Storage if available
+                                    pdf_url = None
+                                    if pdf_file and firebase_storage.enabled:
+                                        try:
+                                            # Read PDF file
+                                            with open(pdf_file, 'rb') as f:
+                                                pdf_content = f.read()
+
+                                            # Upload to Firebase Storage
+                                            sanitized_name = OutputManager.sanitize_company_name(request.company_name)
+                                            pdf_url = firebase_storage.upload_pdf(
+                                                company_name=sanitized_name,
+                                                pdf_content=pdf_content,
+                                                filename="investment-memo.pdf"
+                                            )
+
+                                            if pdf_url:
+                                                memo_data['metadata']['pdf_url'] = pdf_url
+                                                logger.info(f"✅ Uploaded PDF to Firebase Storage")
+                                        except Exception as e:
+                                            logger.warning(f"⚠️ Failed to upload PDF: {e}")
+
+                                    # Save memo to Firestore
+                                    firestore_db.save_memo(company_id, memo_data)
+                                    logger.info(f"✅ Saved memo to Firestore")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to save to Firestore: {e}")
+
                 logger.info(f"Successfully generated memo: {output_file}")
             
             return result

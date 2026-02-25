@@ -3,6 +3,7 @@ from typing import List
 import time
 import os
 import shutil
+import json
 
 from ..models.analysis import (
     RunAnalysisRequest,
@@ -14,6 +15,7 @@ from ..models.analysis import (
     GenerateMemoResponse
 )
 from ..services.job_manager import job_manager, JobStatus
+from ..services.firestore_manager import firestore_db
 from src.processors.analysis_pipeline import AnalysisPipeline
 from src.processors.questionnaire_processor import create_questionnaire_processor
 from src.utils.output_manager import OutputManager
@@ -356,6 +358,37 @@ def run_simulation_background(job_id: str, company_name: str):
 
         processing_time = time.time() - start_time
 
+        # Save to Firestore if enabled
+        if firestore_db.enabled and result.output_file:
+            try:
+                # Read the generated Q&A file
+                with open(result.output_file, 'r', encoding='utf-8') as f:
+                    qa_content = f.read()
+
+                # Get company_id from metadata
+                metadata_file = os.path.join(company_dir, "metadata.json")
+                if os.path.exists(metadata_file):
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+
+                    website = metadata.get('website')
+                    if website:
+                        company = firestore_db.get_company_by_url(website)
+                        if company:
+                            company_id = company['company_id']
+
+                            qa_data = {
+                                'content': qa_content,
+                                'processing_time': processing_time,
+                                'simulation_method': 'ai_simulation',
+                                'metadata': result.metadata or {}
+                            }
+
+                            firestore_db.save_qa_responses(company_id, qa_data)
+                            print(f"✅ Saved Q&A responses to Firestore")
+            except Exception as e:
+                print(f"⚠️ Failed to save Q&A to Firestore: {e}")
+
         # Build response
         qa_result = {
             "success": True,
@@ -427,6 +460,43 @@ def run_qa_upload_background(job_id: str, company_name: str, temp_file_path: str
             raise Exception(result.error_message or "Q&A processing failed")
 
         processing_time = time.time() - start_time
+
+        # Save to Firestore if enabled
+        if firestore_db.enabled and result.output_file:
+            try:
+                # Read the generated Q&A file
+                with open(result.output_file, 'r', encoding='utf-8') as f:
+                    qa_content = f.read()
+
+                # Get company_id from metadata
+                metadata_file = os.path.join(company_dir, "metadata.json")
+                if os.path.exists(metadata_file):
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+
+                    website = metadata.get('website')
+                    if website:
+                        company = firestore_db.get_company_by_url(website)
+                        if company:
+                            company_id = company['company_id']
+
+                            # Get original filename from temp file path
+                            original_filename = os.path.basename(temp_file_path)
+
+                            qa_data = {
+                                'content': qa_content,
+                                'processing_time': processing_time,
+                                'simulation_method': 'uploaded',
+                                'metadata': {
+                                    'original_filename': original_filename,
+                                    **(result.metadata or {})
+                                }
+                            }
+
+                            firestore_db.save_qa_responses(company_id, qa_data)
+                            print(f"✅ Saved uploaded Q&A to Firestore")
+            except Exception as e:
+                print(f"⚠️ Failed to save Q&A to Firestore: {e}")
 
         # Build response
         qa_result = {

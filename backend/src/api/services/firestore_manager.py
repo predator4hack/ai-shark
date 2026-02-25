@@ -511,6 +511,108 @@ class FirestoreBackend(DatabaseBackend):
 
         print(f"🗑️ Invalidated {deleted_count} cached analyses for company {company_id}")
 
+    def save_qa_responses(self, company_id: str, qa_data: Dict) -> None:
+        """
+        Save Q&A responses to Firestore
+
+        Args:
+            company_id: Company identifier
+            qa_data: {
+                "content": str (markdown content),
+                "processing_time": float,
+                "simulation_method": str ("ai_simulation" | "uploaded"),
+                "metadata": {...}
+            }
+        """
+        qa_ref = (self.companies.document(company_id)
+                 .collection('qa_responses')
+                 .document('latest'))  # Always overwrite latest
+
+        qa_ref.set({
+            'content': qa_data['content'],
+            'processing_time': qa_data.get('processing_time', 0),
+            'simulation_method': qa_data.get('simulation_method', 'unknown'),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'metadata': qa_data.get('metadata', {})
+        })
+
+        # Update company processing status
+        self.companies.document(company_id).update({
+            'processing_status.qa_responses_submitted': True,
+            'last_qa_submission_at': firestore.SERVER_TIMESTAMP,
+            'updated_at': firestore.SERVER_TIMESTAMP
+        })
+
+        print(f"✅ Saved Q&A responses to Firestore for company {company_id}")
+
+    def get_qa_responses(self, company_id: str) -> Optional[Dict]:
+        """
+        Get Q&A responses for a company
+
+        Args:
+            company_id: Company identifier
+
+        Returns:
+            Q&A data dict or None if not found
+        """
+        qa_ref = (self.companies.document(company_id)
+                 .collection('qa_responses')
+                 .document('latest'))
+        doc = qa_ref.get()
+
+        return doc.to_dict() if doc.exists else None
+
+    def save_memo(self, company_id: str, memo_data: Dict) -> None:
+        """
+        Save final investment memo to Firestore
+
+        Args:
+            company_id: Company identifier
+            memo_data: {
+                "content": str (markdown content),
+                "processing_time": float,
+                "agent_weights": {...},
+                "metadata": {...}
+            }
+        """
+        memo_ref = (self.companies.document(company_id)
+                   .collection('memos')
+                   .document('latest'))  # Always overwrite latest
+
+        memo_ref.set({
+            'content': memo_data['content'],
+            'processing_time': memo_data.get('processing_time', 0),
+            'agent_weights': memo_data.get('agent_weights', {}),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'metadata': memo_data.get('metadata', {})
+        })
+
+        # Update company processing status
+        self.companies.document(company_id).update({
+            'processing_status.memo_generated': True,
+            'last_memo_generation_at': firestore.SERVER_TIMESTAMP,
+            'updated_at': firestore.SERVER_TIMESTAMP
+        })
+
+        print(f"✅ Saved investment memo to Firestore for company {company_id}")
+
+    def get_memo(self, company_id: str) -> Optional[Dict]:
+        """
+        Get investment memo for a company
+
+        Args:
+            company_id: Company identifier
+
+        Returns:
+            Memo data dict or None if not found
+        """
+        memo_ref = (self.companies.document(company_id)
+                   .collection('memos')
+                   .document('latest'))
+        doc = memo_ref.get()
+
+        return doc.to_dict() if doc.exists else None
+
     # Job management methods
     def save_job(self, job_data: Dict) -> None:
         """
@@ -663,6 +765,26 @@ class FirestoreManager:
         if not self.enabled:
             return False
         return self.backend.check_questionnaire_valid(company_id, agents, current_source_hashes)
+
+    def save_qa_responses(self, company_id: str, qa_data: Dict) -> None:
+        if not self.enabled:
+            raise RuntimeError("Firestore is not enabled")
+        return self.backend.save_qa_responses(company_id, qa_data)
+
+    def get_qa_responses(self, company_id: str) -> Optional[Dict]:
+        if not self.enabled:
+            return None
+        return self.backend.get_qa_responses(company_id)
+
+    def save_memo(self, company_id: str, memo_data: Dict) -> None:
+        if not self.enabled:
+            raise RuntimeError("Firestore is not enabled")
+        return self.backend.save_memo(company_id, memo_data)
+
+    def get_memo(self, company_id: str) -> Optional[Dict]:
+        if not self.enabled:
+            return None
+        return self.backend.get_memo(company_id)
 
 
 # Global instance (similar to storage_manager pattern)

@@ -6,7 +6,22 @@ from datetime import datetime
 from typing import Dict, Any
 
 class OutputManager:
-    """Manages output directory structure and file saving"""
+    """
+    Manages output directory structure and file saving for local development.
+
+    ⚠️ DEPRECATION NOTICE:
+    In cloud deployments (Cloud Run), use Firestore and Firebase Storage instead.
+    These methods are for local development only when USE_FIRESTORE=false.
+
+    For production persistent storage:
+    - Text content (markdown, JSON): Use firestore_manager.py
+    - Binary files (PDFs): Use firebase_storage_manager.py
+
+    This OutputManager is still used for:
+    - Local development and testing
+    - Temporary file operations during processing
+    - Directory name sanitization (sanitize_company_name)
+    """
     
     @staticmethod
     def create_company_dir(company_name: str, base_dir: str = "outputs") -> str:
